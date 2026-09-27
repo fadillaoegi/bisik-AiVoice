@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sama dengan token bg di bisik_frontend/src/index.css dan
+         BisikColors.bg di lib/core/theme/bisik_theme.dart.
+         Dipakai splash dan jendela aplikasi supaya tidak ada kedipan putih
+         antara ikon launcher dan frame pertama Flutter. -->
+    <color name="bisik_bg">#0B1211</color>
+</resources>

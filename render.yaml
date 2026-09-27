@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: bisik
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bisik-db
+          property: connectionString
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
+      - key: ASSEMBLYAI_WS_URL
+        value: wss://streaming.assemblyai.com/v3/ws
+      - key: ASSEMBLYAI_SPEECH_MODEL
+        value: whisper-rt
+      # Model kedua khusus diarization; dijalankan bersamaan atas audio yang
+      # sama. Kosongkan untuk kembali ke satu stream.
+      - key: ASSEMBLYAI_DIARIZER_MODEL
+        value: universal-streaming-multilingual
+      - key: ASSEMBLYAI_SPEAKER_REVISION_INTERVAL_MS
+        value: "120000"
+      - key: LLM_MODEL
+        value: claude-sonnet-4-6
+      - key: NUDGE_INTERVAL_SECONDS
+        value: "45"
+      # Menandatangani token bearer. Backend menolak start kalau kosong —
+      # sengaja, supaya tidak ada rahasia bawaan yang ikut ter-commit.
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: AUTH_TOKEN_TTL_HOURS
+        value: "12"
+      # Akun awal, hanya dibuat saat tabel users masih kosong.
+      # Kata sandi diisi manual di dashboard Render, tidak pernah di repo.
+      - key: SEED_OFFICER_USERNAME
+        value: petugas
+      - key: SEED_OFFICER_PASSWORD
+        sync: false
+      - key: SEED_SUPERVISOR_USERNAME
+        value: supervisor
+      - key: SEED_SUPERVISOR_PASSWORD
+        sync: false
+
+databases:
+  - name: bisik-db
+    plan: free
+    region: singapore
+    databaseName: bisik
+    user: bisik
+    postgresMajorVersion: "18"
+    ipAllowList: []

@@ -1,0 +1,26 @@
+<!--
+  Lapisan depan adaptive icon Android (API 26+).
+  Latar sengaja transparan: warnanya datang dari @color/ic_launcher_background.
+  Gambar diperkecil 0.9 dan digeser ke tengah supaya tetap di dalam safe zone
+  adaptive icon — launcher boleh memotong tepi kanvas sesuai bentuk maskernya.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Bisik</title>
+  <g transform="translate(0.4,-1.4) scale(0.9)">
+    <path
+      d="M112 120h288c31 0 56 25 56 56v152c0 31-25 56-56 56H246l-86 68v-68h-48c-31 0-56-25-56-56V176c0-31 25-56 56-56Z"
+      fill="#15211f"
+      stroke="#6ee7b7"
+      stroke-linejoin="round"
+      stroke-width="24"
+    />
+    <g fill="#6ee7b7">
+      <rect x="126" y="230" width="28" height="52" rx="14"/>
+      <rect x="184" y="194" width="28" height="124" rx="14"/>
+      <rect x="242" y="164" width="28" height="184" rx="14"/>
+      <rect x="300" y="202" width="28" height="108" rx="14"/>
+      <rect x="358" y="232" width="28" height="48" rx="14"/>
+    </g>
+    <circle cx="408" cy="152" r="22" fill="#fbbf24"/>
+  </g>
+</svg>

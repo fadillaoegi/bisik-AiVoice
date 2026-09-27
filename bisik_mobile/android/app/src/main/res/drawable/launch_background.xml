@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash Bisik. Sebelumnya putih bawaan scaffold, jadi aplikasi berkedip
+  terang sebelum UI gelap muncul. Warna di sini harus sama persis dengan
+  latar aplikasi agar peralihannya tidak terlihat.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/bisik_bg" />
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@mipmap/ic_launcher_foreground" />
+    </item>
+</layer-list>

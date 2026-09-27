@@ -1,0 +1,119 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root{
+    --bg:#0b1211; --surface:#121c1a; --border:#1f302c;
+    --text:#e8f2ee; --muted:#8ba39c; --mint:#6ee7b7; --amber:#fbbf24; --sky:#7dd3fc;
+  }
+  body{
+    width:1920px; height:1080px; background:var(--bg); color:var(--text);
+    font:400 16px/1.4 -apple-system,"SF Pro Display",system-ui,sans-serif;
+    display:grid; grid-template-columns:1.05fr .95fr; align-items:center;
+    gap:96px; padding:110px 120px; overflow:hidden; position:relative;
+  }
+  /* Bidang mint sangat tipis di sudut: memberi kedalaman tanpa jadi glow norak */
+  body::after{
+    content:""; position:absolute; right:-260px; top:-260px; width:900px; height:900px;
+    background:radial-gradient(circle, rgba(110,231,183,.07) 0%, transparent 62%);
+    pointer-events:none;
+  }
+  .left{ position:relative; z-index:1; }
+  .mark{ display:flex; align-items:center; gap:22px; margin-bottom:52px; }
+  .mark span{
+    font-size:28px; font-weight:600; letter-spacing:.2em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  h1{
+    font-size:132px; line-height:.95; font-weight:700; letter-spacing:-.035em;
+    color:var(--mint); margin-bottom:34px;
+  }
+  .lead{ font-size:46px; line-height:1.24; font-weight:600; letter-spacing:-.015em; max-width:15ch; }
+  .lead em{ font-style:normal; color:var(--mint); }
+  .sub{ margin-top:30px; font-size:25px; line-height:1.5; color:var(--muted); max-width:30ch; }
+  .foot{
+    position:absolute; left:120px; bottom:96px; display:flex; align-items:center; gap:18px;
+    font-size:20px; color:var(--muted); letter-spacing:.01em;
+  }
+  .foot b{ color:var(--text); font-weight:600; }
+  .dot-sep{ width:5px; height:5px; border-radius:50%; background:var(--border); }
+
+  /* --- Panel produk: UI asli, bukan ilustrasi --- */
+  .panel{
+    background:var(--surface); border:1px solid var(--border); border-radius:26px;
+    padding:44px; position:relative; z-index:1;
+    box-shadow:0 50px 110px rgba(0,0,0,.55);
+  }
+  .status{ display:flex; align-items:center; gap:13px; color:var(--muted); font-size:21px; margin-bottom:30px; }
+  .live{ width:12px; height:12px; border-radius:50%; background:var(--mint); }
+  .whisper{
+    display:flex; align-items:center; gap:16px; padding:20px 24px; margin-bottom:30px;
+    border:1px solid var(--amber); border-radius:14px;
+    background:rgba(251,191,36,.10); color:var(--amber); font-size:23px; font-weight:600;
+  }
+  .focus{ border:1px solid var(--border); border-radius:20px; padding:34px 32px; background:#0f1a18; }
+  .eyebrow{ font-size:17px; font-weight:700; letter-spacing:.17em; color:var(--muted); text-transform:uppercase; }
+  .title{ margin-top:16px; font-size:52px; font-weight:700; letter-spacing:-.02em; color:var(--mint); line-height:1.04; }
+  .hint{ margin-top:16px; font-size:23px; color:var(--text); opacity:.85; }
+  .dots{ display:flex; align-items:center; gap:14px; margin-top:34px; }
+  .d{ width:19px; height:19px; border-radius:50%; border:3px solid var(--border); }
+  .d.on{ background:var(--mint); border-color:var(--mint); }
+  .count{ margin-left:10px; font-size:21px; color:var(--muted); }
+  .heard{ margin-top:34px; padding-top:28px; border-top:1px solid var(--border); font-size:22px; line-height:1.65; }
+  .who{ font-weight:600; margin-right:12px; }
+  .off{ color:var(--mint); } .cus{ color:var(--sky); }
+  .heard p + p{ margin-top:12px; }
+</style></head><body>
+
+<div class="left">
+  <div class="mark">
+    <svg width="62" height="62" viewBox="0 0 512 512" aria-hidden="true">
+      <path d="M112 120h288c31 0 56 25 56 56v152c0 31-25 56-56 56H246l-86 68v-68h-48c-31 0-56-25-56-56V176c0-31 25-56 56-56Z"
+            fill="#15211f" stroke="#6ee7b7" stroke-linejoin="round" stroke-width="26"/>
+      <g fill="#6ee7b7">
+        <rect x="126" y="230" width="28" height="52" rx="14"/>
+        <rect x="184" y="194" width="28" height="124" rx="14"/>
+        <rect x="242" y="164" width="28" height="184" rx="14"/>
+        <rect x="300" y="202" width="28" height="108" rx="14"/>
+        <rect x="358" y="232" width="28" height="48" rx="14"/>
+      </g>
+      <circle cx="408" cy="152" r="22" fill="#fbbf24"/>
+    </svg>
+    <span>Compliance copilot</span>
+  </div>
+
+  <h1>Bisik</h1>
+  <p class="lead">An AI that listens to <em>two humans</em>.</p>
+  <p class="sub">It hears what a loan officer forgot to disclose — and whispers it into their earpiece before the customer signs.</p>
+</div>
+
+<div class="panel">
+  <div class="status"><span class="live"></span> Terhubung · merekam</div>
+  <div class="whisper">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fbbf24"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 5 6 9H3v6h3l5 4V5Z" fill="#fbbf24" stroke="none"/>
+      <path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>
+    </svg>
+    Sebutkan denda keterlambatan
+  </div>
+
+  <div class="focus">
+    <div class="eyebrow">Belum disampaikan</div>
+    <div class="title">Denda keterlambatan</div>
+    <div class="hint">Jelaskan denda kalau nasabah telat membayar.</div>
+    <div class="dots">
+      <span class="d on"></span><span class="d on"></span><span class="d on"></span>
+      <span class="d"></span><span class="d"></span>
+      <span class="count">3 dari 5</span>
+    </div>
+  </div>
+
+  <div class="heard">
+    <p><span class="who off">Petugas</span>Bunganya 1,2 persen per bulan.</p>
+    <p><span class="who cus">Nasabah</span>Kalau saya telat bayar gimana?</p>
+  </div>
+</div>
+
+<div class="foot">
+  <b>AssemblyAI Voice Agent Hackathon</b><span class="dot-sep"></span>Real-time streaming STT + speaker diarization
+</div>
+</body></html>

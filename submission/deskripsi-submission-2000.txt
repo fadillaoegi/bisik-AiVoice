@@ -1,0 +1,21 @@
+Almost every voice agent is human-to-bot. Bisik is an AI that listens to two humans.
+
+In Indonesian field lending, the most consequential conversation happens with no record at all: a loan officer sitting in a customer's living room, explaining a product from memory. Regulators require specific disclosures — interest rate, tenor, late penalty, the right to walk away. When one is skipped nobody notices for months, and by then the customer has already signed.
+
+Bisik fixes the omission while it still matters. It transcribes both speakers, works out who is talking, and tracks which disclosures the officer actually made. When one is missing it whispers a reminder privately into the officer's earpiece — the customer hears nothing. Forbidden promises like "your loan is guaranteed" are flagged the moment they are spoken. At the end it produces an evidence-backed report: under each obligation, the exact sentence that satisfied it, with a timestamp.
+
+How AssemblyAI is used:
+
+• Universal Streaming v3 over raw WebSocket, no SDK. PCM16 16kHz from a Web AudioWorklet, buffered into the 50-1000ms frame window.
+
+• Streaming diarization with explicit two-voice calibration — a human confirms which voice is the officer before scoring starts. Speaking order is not identity.
+
+• SpeakerRevision handling. When diarization later corrects a label, that utterance is re-scored. An utterance that turns out to be the officer's has never been evaluated, so without re-scoring a correction from the model would make the report wrong rather than right.
+
+• LLM Gateway for semantic matching, gated behind deterministic evidence checks and a 0.80 confidence floor.
+
+Every decision leans one way: a grey checklist item is an inconvenience, a false green one makes the report lie. Ambiguous audio, unknown speakers and third parties are excluded from scoring, never guessed.
+
+Raw audio is never stored — only the transcript and evidence.
+
+An 11-second guided demo runs in the browser, no microphone needed.

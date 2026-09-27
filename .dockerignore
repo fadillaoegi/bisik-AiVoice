@@ -1,0 +1,9 @@
+.git
+**/.env
+**/node_modules
+**/.vite
+**/bin
+**/.dart_tool
+**/build
+**/*.log
+bisik_mobile

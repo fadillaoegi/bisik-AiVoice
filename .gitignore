@@ -1,0 +1,23 @@
+.DS_Store
+node_modules/
+**/.vite/
+dist/
+!bisik_frontend/dist/
+!bisik_frontend/dist/**
+bin/
+.env
+*.log
+.dart_tool/
+build/
+
+# Ignore markdown files and rradmin
+*.md
+!README.md
+!**/README.md
+!readme.md
+!**/readme.md
+!PROGRESS.md
+!TESTING.md
+!FEATURE-ROADMAP.md
+!bisik_backend/SCHEMA.md
+rradmin

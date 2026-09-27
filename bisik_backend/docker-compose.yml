@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: bisik_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: saksi
+      POSTGRES_PASSWORD: saksi
+      POSTGRES_DB: saksi
+    ports:
+      - "5432:5432"
+    volumes:
+      # Nama fisik volume sengaja tetap memakai nama project lama agar data
+      # PostgreSQL 18 yang sudah ada tidak ditinggalkan setelah rename ke Bisik.
+      # Ini BUKAN volume PG17; format data major version berbeda tidak boleh
+      # dipasang langsung ke server PG18.
+      # Mulai image 18, image resmi menyimpan cluster pada subdirektori
+      # major-version dan meminta volume dipasang di parent directory ini.
+      - bisik_pgdata18:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saksi -d saksi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Opsional: jalankan backend di dalam Docker juga.
+  #   docker compose --profile full up
+  # Untuk dev sehari-hari lebih enak `make dev` (hot path di host).
+  api:
+    profiles: ["full"]
+    build: .
+    container_name: bisik_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://saksi:saksi@postgres:5432/saksi?sslmode=disable"
+      ASSEMBLYAI_API_KEY: "${ASSEMBLYAI_API_KEY}"
+      ALLOWED_ORIGINS: "http://localhost:5173"
+    ports:
+      - "8080:8080"
+
+volumes:
+  bisik_pgdata18:
+    name: saksi_backend_saksi_pgdata18
