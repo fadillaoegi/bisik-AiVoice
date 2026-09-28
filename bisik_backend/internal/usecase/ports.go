@@ -60,7 +60,27 @@ type Guardrail interface {
 
 // Nudger membisikkan pengingat HANYA ke earpiece petugas.
 type Nudger interface {
-	Whisper(ctx context.Context, sessionID string, text string) error
+	Whisper(ctx context.Context, sessionID string, nudge Nudge) error
+}
+
+// Jenis bisikan. Klien memakainya untuk menampilkan bisikan dalam bahasa
+// antarmuka pilihan petugas.
+const (
+	NudgeAvoidPhrase       = "avoid_phrase"
+	NudgePendingObligation = "pending_obligation"
+)
+
+// Nudge adalah satu bisikan.
+//
+// Text selalu Bahasa Indonesia: kalimat itulah yang diucapkan ke earpiece
+// dan yang dicocokkan isNudgeEcho. Kind, Code, dan Phrase hanya untuk
+// tampilan — klien dengan antarmuka Bahasa Inggris menyusun ulang teksnya
+// dari sini, tanpa mengubah apa yang terdengar.
+type Nudge struct {
+	Text   string
+	Kind   string
+	Code   string // kode kewajiban, untuk NudgePendingObligation
+	Phrase string // frasa terlarang, untuk NudgeAvoidPhrase
 }
 
 // Broadcaster mendorong update realtime ke klien (officer + supervisor).

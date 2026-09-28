@@ -47,7 +47,10 @@ class SessionController extends Notifier<SessionState> {
 
   Future<void> end() async {
     final id = state.session?.id;
-    if (id == null) return;
+    // Ketukan kedua saat sesi sedang ditutup akan meminta endpoint yang sama
+    // dua kali; yang kedua gagal karena sesinya sudah berakhir.
+    if (id == null || state.ending) return;
+    state = state.copyWith(ending: true);
     try {
       final session = await ref.read(endSessionProvider)(id);
       await _teardown();
@@ -65,6 +68,8 @@ class SessionController extends Notifier<SessionState> {
       state = state.copyWith(report: report, loadingReport: false);
     } catch (e) {
       state = state.copyWith(error: e, loadingReport: false);
+    } finally {
+      state = state.copyWith(ending: false);
     }
   }
 
@@ -97,6 +102,14 @@ class SessionController extends Notifier<SessionState> {
     state = const SessionState();
     unawaited(loadObligations());
   }
+
+  /// Mengosongkan layar tanpa memuat apa pun — dipakai saat keluar.
+  ///
+  /// Beda dengan [reset]: memuat kewajiban butuh token, dan token sedang
+  /// dihapus. Permintaan itu akan gagal 401 dan meninggalkan pesan error
+  /// untuk petugas berikutnya. `OfficerPage` memuat kewajiban sendiri saat
+  /// dibuka lagi setelah login.
+  void clear() => state = const SessionState();
 
   Future<void> _listen(String sessionId) async {
     final usecase = ref.read(streamSessionProvider);
@@ -249,6 +262,12 @@ class SessionController extends Notifier<SessionState> {
           error: message ?? const AudioFailure(FailureKind.audioPathLost),
           recording: false,
         );
+
+      // Tanpa ini gejalanya hanya checklist yang tak pernah hijau dan
+      // pengingat tanpa henti — persis yang terjadi saat akun kehilangan
+      // akses LLM Gateway pada 28 Sep 2026.
+      case ScoringUnavailable(:final message):
+        state = state.copyWith(scoringError: message);
 
       case UnknownEvent():
         break;

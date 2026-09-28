@@ -1,3 +1,5 @@
+import { useI18n } from '../i18n/useI18n'
+
 interface CalibrationSample {
   id: string
   sourceSpeaker: string
@@ -33,6 +35,7 @@ export function SpeakerCalibration({
   onConfirm,
   onRestart,
 }: Props) {
+  const { t } = useI18n()
   const utterances = lastUtteranceByVoice(samples)
   const voices = [...utterances.keys()].sort()
 
@@ -46,24 +49,25 @@ export function SpeakerCalibration({
   return (
     <section className="calibration" aria-labelledby="calibration-title">
       <p className="calibration__eyebrow">
-        Langkah keamanan · belum dinilai{step < 3 && ` · langkah ${step} dari 2`}
+        {t.calibration.eyebrow}
+        {step < 3 && t.calibration.step(step)}
       </p>
-      <h2 id="calibration-title">Kenali dua suara</h2>
+      <h2 id="calibration-title">{t.calibration.title}</h2>
 
       {/* LANGKAH 1 — petugas */}
       {step === 1 ? (
         <>
           <p className="calibration__prompt">
-            <strong>Petugas</strong>, ucapkan kalimat ini dengan jelas:
+            <strong>{t.speakers.officer}</strong>, {t.calibration.officerPrompt}
           </p>
-          <p className="calibration__script">“Saya petugas yang menjalankan sesi ini.”</p>
-          <p className="calibration__waiting">Mendengarkan suara petugas…</p>
+          <p className="calibration__script">{t.calibration.officerScript}</p>
+          <p className="calibration__waiting">{t.calibration.listeningOfficer}</p>
         </>
       ) : (
         <div className="calibration__done">
           <span className="calibration__check">✓</span>
           <span>
-            <strong>Petugas terdaftar</strong> · Suara {officer}
+            <strong>{t.calibration.officerRegistered}</strong> · {t.calibration.voice(officer!)}
             <small>{utterances.get(officer!)}</small>
           </span>
         </div>
@@ -73,17 +77,17 @@ export function SpeakerCalibration({
       {step === 2 && (
         <>
           <p className="calibration__prompt">
-            Sekarang giliran <strong>nasabah</strong>. Ucapkan:
+            {t.calibration.customerPromptLead} <strong>{t.calibration.customerWord}</strong>
+            {t.calibration.customerPromptTail}
           </p>
-          <p className="calibration__script">“Saya nasabah dan siap memulai.”</p>
+          <p className="calibration__script">{t.calibration.customerScript}</p>
           {duplicateVoice ? (
             <p className="warn-box">
-              Suara itu sudah terdaftar sebagai petugas. Minta <strong>orang
-              kedua</strong> yang berbicara — sistem perlu mendengar suara yang
-              berbeda untuk bisa membedakan keduanya.
+              {t.calibration.duplicateLead} <strong>{t.calibration.duplicateStrong}</strong>{' '}
+              {t.calibration.duplicateTail}
             </p>
           ) : (
-            <p className="calibration__waiting">Mendengarkan suara nasabah…</p>
+            <p className="calibration__waiting">{t.calibration.listeningCustomer}</p>
           )}
         </>
       )}
@@ -92,31 +96,29 @@ export function SpeakerCalibration({
         <div className="calibration__done">
           <span className="calibration__check">✓</span>
           <span>
-            <strong>Nasabah terdaftar</strong> · Suara {customer}
+            <strong>{t.calibration.customerRegistered}</strong> · {t.calibration.voice(customer!)}
             <small>{utterances.get(customer!)}</small>
           </span>
         </div>
       )}
 
-      {error && <p className="error-box">Kalibrasi gagal: {error}</p>}
+      {error && <p className="error-box">{t.calibration.failed(error)}</p>}
 
       <button
         className="btn btn--primary btn--wide"
         disabled={step !== 3}
         onClick={() => officer && customer && onConfirm(officer, customer)}
       >
-        {step === 3 ? 'Konfirmasi dan mulai penilaian' : 'Menunggu dua suara'}
+        {step === 3 ? t.calibration.confirm : t.calibration.waiting}
       </button>
 
       {/* Jalan keluar kalau orang yang salah bicara duluan, atau kalau suara
           kedua tidak pernah terpisah. */}
       <button className="btn--link" onClick={onRestart}>
-        Ulangi kalibrasi dari awal
+        {t.calibration.restart}
       </button>
 
-      <small className="calibration__note">
-        Ucapan kalibrasi tidak masuk laporan dan tidak dinilai.
-      </small>
+      <small className="calibration__note">{t.calibration.note}</small>
     </section>
   )
 }

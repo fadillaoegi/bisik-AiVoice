@@ -64,18 +64,6 @@ class SpeakerCalibration extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          // Kalimat kalibrasi tetap Bahasa Indonesia; di antarmuka lain,
-          // jelaskan kenapa — kalau diucapkan dalam bahasa lain, transkripsi
-          // seluruh sesi ikut terkunci ke bahasa itu.
-          if (s.calibrationScriptNote.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                s.calibrationScriptNote,
-                style: const TextStyle(color: BisikColors.muted, fontSize: 12),
-              ),
-            ),
-
           if (step == 1) ...[
             _Prompt(who: s.officer, trailing: s.officerPromptTrailing),
             _Script(s.officerScript),

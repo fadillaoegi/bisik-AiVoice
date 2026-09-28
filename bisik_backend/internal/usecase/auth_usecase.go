@@ -81,6 +81,52 @@ func (uc *AuthUsecase) Login(ctx context.Context, username, password string) (*L
 	return &LoginResult{Token: token, Expiry: expiry, User: user}, nil
 }
 
+// MinPasswordLength berlaku untuk akun yang dibuat lewat CreateUser.
+const MinPasswordLength = 8
+
+// CreateUser menambah satu akun ke database yang sudah berjalan.
+//
+// Seed hanya bekerja saat tabel users kosong, jadi akun berikutnya — petugas
+// baru, misalnya — lewat jalur ini. Username dicek tanpa membedakan huruf
+// besar-kecil, sama seperti saat login: "Handoko" dan "handoko" adalah akun
+// yang sama.
+func (uc *AuthUsecase) CreateUser(ctx context.Context, account SeedAccount) (*domain.User, error) {
+	account.Username = strings.TrimSpace(account.Username)
+	account.Name = strings.TrimSpace(account.Name)
+	if account.Username == "" || account.Name == "" {
+		return nil, fmt.Errorf("%w: username dan nama wajib diisi", domain.ErrInvalidInput)
+	}
+	if !account.Role.Valid() {
+		return nil, fmt.Errorf("%w: role %q", domain.ErrInvalidInput, account.Role)
+	}
+	if len(account.Password) < MinPasswordLength {
+		return nil, fmt.Errorf("%w: kata sandi minimal %d karakter", domain.ErrInvalidInput, MinPasswordLength)
+	}
+
+	switch _, err := uc.users.FindByUsername(ctx, account.Username); {
+	case err == nil:
+		return nil, fmt.Errorf("%w: username %q sudah dipakai", domain.ErrConflict, account.Username)
+	case !errors.Is(err, domain.ErrNotFound):
+		return nil, err
+	}
+
+	hash, err := uc.hasher.Hash(account.Password)
+	if err != nil {
+		return nil, err
+	}
+	user := &domain.User{
+		ID:           uuid.NewString(),
+		Username:     account.Username,
+		Name:         account.Name,
+		Role:         account.Role,
+		PasswordHash: hash,
+	}
+	if err := uc.users.Create(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 // SeedAccount adalah akun awal yang dibuat saat tabel users masih kosong.
 type SeedAccount struct {
 	Username string

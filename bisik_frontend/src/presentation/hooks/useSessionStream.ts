@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { container } from '../../infrastructure/di/container'
 import type { SessionEvent } from '../../domain/entities/events'
 import type { SocketRole } from '../../infrastructure/ws/session_socket'
+import type { AudioProcessing } from '../../domain/repositories/audio_repository'
+import { AppError } from '../../domain/entities/app_error'
 import { useAppDispatch } from './redux'
 import { connectionChanged, recordingChanged, sessionFailed } from '../../application/store/slices/sessionSlice'
 import {
@@ -47,7 +49,12 @@ export function useSessionStream(sessionId: string | null, role: SocketRole) {
   // Apa yang benar-benar aktif di mikrofon. Dipakai saat menguji di lapangan:
   // kalau peredam bawaan ternyata mati, itu penjelasan pertama kenapa
   // transkrip berantakan — dan tanpa ditampilkan, tidak ada yang tahu.
-  const [micProcessing, setMicProcessing] = useState<string | null>(null)
+  // Disimpan sebagai kunci, bukan kalimat, supaya ikut bahasa antarmuka.
+  // Penilai semantik gagal (mis. akun kehilangan akses LLM Gateway). Sesi
+  // tetap berjalan, tetapi tidak ada kewajiban yang bisa terpenuhi — petugas
+  // harus tahu sekarang, bukan setelah menunggu checklist yang tak pernah hijau.
+  const [scoringError, setScoringError] = useState<string | null>(null)
+  const [micProcessing, setMicProcessing] = useState<Array<keyof AudioProcessing>>([])
 
   const handleEvent = useCallback(
     (e: SessionEvent) => {
@@ -130,13 +137,16 @@ export function useSessionStream(sessionId: string | null, role: SocketRole) {
         case 'evidence_skipped':
           setExcludedCount((n) => n + 1)
           break
+        case 'scoring_unavailable':
+          setScoringError(e.message)
+          break
         case 'session_error':
           // Jalur audio mati: hentikan indikator merekam dan tampilkan
           // sebabnya, jangan biarkan UI terlihat masih menyimak.
           dispatch(sessionFailed(e.message))
           break
         case 'nudge':
-          dispatch(nudgeReceived(e.text))
+          dispatch(nudgeReceived({ text: e.text, kind: e.kind, code: e.code, phrase: e.phrase }))
           // Hanya petugas yang mendengar bisikan.
           if (role === 'officer') container.repositories.speech.speak(e.text)
           break
@@ -165,17 +175,17 @@ export function useSessionStream(sessionId: string | null, role: SocketRole) {
           .then(() => {
             dispatch(recordingChanged(true))
             const p = container.repositories.audio.processing
-            const on = [
-              p.noiseSuppression && 'peredam bising',
-              p.voiceIsolation && 'isolasi suara',
-              p.echoCancellation && 'peredam gema',
-            ].filter(Boolean)
-            setMicProcessing(on.length > 0 ? on.join(' · ') : null)
+            const shown: Array<keyof AudioProcessing> = [
+              'noiseSuppression',
+              'voiceIsolation',
+              'echoCancellation',
+            ]
+            setMicProcessing(shown.filter((key) => p[key]))
           })
           .catch((err: Error) => dispatch(sessionFailed(err.message)))
       },
       onClose: () => dispatch(connectionChanged(false)),
-      onError: () => dispatch(sessionFailed('Koneksi gateway terputus')),
+      onError: () => dispatch(sessionFailed(AppError.gatewayLost)),
     })
 
     return () => {
@@ -214,5 +224,6 @@ export function useSessionStream(sessionId: string | null, role: SocketRole) {
     audioWarning,
     excludedCount,
     micProcessing,
+    scoringError,
   }
 }

@@ -45,6 +45,59 @@ Kalimat petugas: "%s"
 Jawab HANYA dengan JSON: {"matched": true|false, "confidence": 0.0-1.0}
 matched=true hanya jika kalimat itu benar-benar memenuhi butir di atas secara substantif, bukan sekadar menyinggung topiknya.`
 
+// Ping memastikan akun benar-benar boleh memakai model ini.
+//
+// Dipanggil sekali saat backend menyala. Tanpanya, akun yang kehilangan
+// akses LLM Gateway tampak sehat — transkripsi tetap jalan — padahal tidak
+// satu pun kewajiban bisa terpenuhi, dan satu-satunya gejala yang terlihat
+// adalah pengingat yang terus berbunyi.
+func (m *LLMMatcher) Ping(ctx context.Context) error {
+	if m.apiKey == "" {
+		return fmt.Errorf("ASSEMBLYAI_API_KEY kosong")
+	}
+	body, _ := json.Marshal(map[string]any{
+		"model":      m.model,
+		"max_tokens": 1,
+		"messages":   []map[string]string{{"role": "user", "content": "ok"}},
+	})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, m.url, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", m.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := m.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, gatewayReason(raw))
+	}
+	return nil
+}
+
+// gatewayReason mengambil kalimat penyebab dari badan error LLM Gateway.
+// Yang berguna ada di metadata.errors; "message" hanya "invalid request body".
+func gatewayReason(raw []byte) string {
+	var body struct {
+		Message  string `json:"message"`
+		Metadata struct {
+			Errors []string `json:"errors"`
+		} `json:"metadata"`
+	}
+	if json.Unmarshal(raw, &body) == nil {
+		if len(body.Metadata.Errors) > 0 {
+			return body.Metadata.Errors[0]
+		}
+		if body.Message != "" {
+			return body.Message
+		}
+	}
+	return strings.TrimSpace(string(raw))
+}
+
 func (m *LLMMatcher) Match(ctx context.Context, utterance string, ob domain.Obligation) (bool, float64, error) {
 	if m.apiKey == "" {
 		return false, 0, nil
@@ -73,7 +126,7 @@ func (m *LLMMatcher) Match(ctx context.Context, utterance string, ob domain.Obli
 	defer resp.Body.Close()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return false, 0, fmt.Errorf("LLM Gateway HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(raw)))
+		return false, 0, fmt.Errorf("LLM Gateway HTTP %d: %s", resp.StatusCode, gatewayReason(raw))
 	}
 
 	var out struct {

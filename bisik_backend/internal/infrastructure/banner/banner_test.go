@@ -66,3 +66,15 @@ func TestTanpaWarnaSaatBukanTerminal(t *testing.T) {
 		t.Fatal("kode ANSI bocor ke tujuan non-terminal")
 	}
 }
+
+// Akun tanpa akses LLM Gateway tetap bisa mentranskrip, jadi dari luar
+// semuanya tampak sehat. Banner harus menyebutnya terang-terangan.
+func TestBannerMemperingatkanPenilaiTidakBisaDipakai(t *testing.T) {
+	var buf bytes.Buffer
+	Print(&buf, Config{Port: "8080", TranscriptModel: "whisper-rt", LLMModel: "claude-sonnet-4-6",
+		LLMProblem: "HTTP 400: Your account does not have access to this LLM Gateway model"})
+	out := buf.String()
+	if !strings.Contains(out, "TIDAK BISA DIPAKAI") || !strings.Contains(out, "does not have access") {
+		t.Fatalf("masalah penilai tidak disebut:\n%s", out)
+	}
+}

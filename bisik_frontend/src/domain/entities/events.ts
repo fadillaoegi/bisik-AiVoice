@@ -12,8 +12,15 @@ export type SessionEvent =
   | { type: 'speaker_calibration_error'; message: string }
   | { type: 'obligation_satisfied'; code: string; confidence: number; evidence_id: string }
   | { type: 'violation'; phrase: string; severity: string; evidence_id: string }
-  | { type: 'nudge'; text: string }
+  | {
+      type: 'nudge'
+      text: string
+      kind?: 'avoid_phrase' | 'pending_obligation'
+      code?: string
+      phrase?: string
+    }
   | { type: 'session_error'; message: string }
+  | { type: 'scoring_unavailable'; message: string }
   | { type: 'speaker_unknown'; utterance_id: string; text: string }
   | { type: 'evidence_skipped'; utterance_id: string; reason: string }
   | { type: 'audio_quality'; degraded: boolean; reason: string }

@@ -5,6 +5,9 @@ import { loggedIn, loginFailed } from '../../application/store/slices/authSlice'
 import { selectAuthError } from '../../application/store/selectors'
 import { BisikWave } from './BisikWave'
 import type { Role } from '../../domain/entities/auth'
+import { AppError } from '../../domain/entities/app_error'
+import { useI18n } from '../i18n/useI18n'
+import { localizeError } from '../i18n/localize'
 
 interface Props {
   /** Peran yang dibutuhkan halaman ini; login dengan peran lain ditolak. */
@@ -13,13 +16,9 @@ interface Props {
   hint: string
 }
 
-const roleLabel: Record<Role, string> = {
-  officer: 'petugas',
-  supervisor: 'supervisor',
-}
-
 export function LoginForm({ expects, title, hint }: Props) {
   const dispatch = useAppDispatch()
+  const { t } = useI18n()
   const error = useAppSelector(selectAuthError)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -35,11 +34,7 @@ export function LoginForm({ expects, title, hint }: Props) {
       // hanya penjagaan UI — backend tetap menolak sendiri lewat peran token.
       if (session.user.role !== expects) {
         container.repositories.auth.logout()
-        dispatch(
-          loginFailed(
-            `Akun ini adalah ${roleLabel[session.user.role]}. Halaman ini untuk ${roleLabel[expects]}.`,
-          ),
-        )
+        dispatch(loginFailed(AppError.roleMismatch(session.user.role, expects)))
         return
       }
       dispatch(loggedIn(session.user))
@@ -56,7 +51,7 @@ export function LoginForm({ expects, title, hint }: Props) {
       <p className="muted">{hint}</p>
 
       <div className="field">
-        <label htmlFor="username">Nama pengguna</label>
+        <label htmlFor="username">{t.auth.username}</label>
         <input
           id="username"
           autoComplete="username"
@@ -66,7 +61,7 @@ export function LoginForm({ expects, title, hint }: Props) {
       </div>
 
       <div className="field">
-        <label htmlFor="password">Kata sandi</label>
+        <label htmlFor="password">{t.auth.password}</label>
         <input
           id="password"
           type="password"
@@ -80,14 +75,14 @@ export function LoginForm({ expects, title, hint }: Props) {
         {busy ? (
           <span className="btn__busy">
             <BisikWave />
-            Memeriksa…
+            {t.auth.checking}
           </span>
         ) : (
-          'Masuk'
+          t.auth.submit
         )}
       </button>
 
-      {error && <p className="error-box">{error}</p>}
+      {error && <p className="error-box">{localizeError(t, error)}</p>}
     </form>
   )
 }

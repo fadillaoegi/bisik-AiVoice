@@ -36,7 +36,7 @@ type Config struct {
 func Load() Config {
 	return Config{
 		Port:                         env("PORT", "8080"),
-		DatabaseURL:                  env("DATABASE_URL", "postgres://saksi:saksi@localhost:5432/saksi?sslmode=disable"),
+		DatabaseURL:                  env("DATABASE_URL", "postgres://bisik:bisik@localhost:5432/bisik?sslmode=disable"),
 		AssemblyAIKey:                env("ASSEMBLYAI_API_KEY", ""),
 		AssemblyAIWSURL:              env("ASSEMBLYAI_WS_URL", "wss://streaming.assemblyai.com/v3/ws"),
 		AssemblyAISpeechModel:        env("ASSEMBLYAI_SPEECH_MODEL", "whisper-rt"),

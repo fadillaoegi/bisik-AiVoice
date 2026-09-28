@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"sync"
@@ -39,7 +41,58 @@ type ComplianceUsecase struct {
 	// nudges menyimpan bisikan yang baru diucapkan per sesi, untuk mengenali
 	// gemanya sendiri. Lihat isNudgeEcho.
 	nudges map[string][]spokenNudge
+	// scoringDown menandai sesi yang sudah diberi tahu bahwa penilai
+	// semantik gagal, supaya layar petugas tidak dibanjiri pesan yang sama.
+	scoringDown map[string]bool
+	// scorerProblem diisi saat uji akses penilai gagal ketika startup.
+	scorerProblem string
+
+	// fragments menyimpan potongan kalimat petugas yang baru saja diucapkan.
+	// Lihat stitchOfficerSentence.
+	fragments map[string][]officerFragment
+	// reminders mencatat kapan dan berapa kali tiap butir dibisikkan.
+	reminders map[string]*reminderLog
+
+	log *slog.Logger
+	now func() time.Time
 }
+
+type officerFragment struct {
+	text           string
+	startMS, endMS int
+}
+
+type reminderLog struct {
+	last  time.Time
+	count map[string]int
+}
+
+const (
+	// Jeda terpanjang di TENGAH kalimat. whisper-rt memotong turn pada jeda
+	// sependek ~1 detik dan mengabaikan parameter end-of-turn (diuji
+	// 28 Sep 2026: min_end_of_turn_silence_when_confident, max_turn_silence,
+	// end_of_turn_confidence_threshold tidak mengubah potongan).
+	fragmentJoinGapMS = 2000
+	// Batas panjang satu kalimat gabungan, supaya dua kalimat berbeda yang
+	// kebetulan berdekatan tidak dijahit menjadi satu bukti.
+	fragmentMaxSpanMS = 15000
+	fragmentMaxCount  = 4
+
+	// Bisikan pengingat: jarak minimal antar-bisikan dalam satu sesi, dan
+	// batas pengulangan per butir. Dulu butir pertama yang pending dibisikkan
+	// setiap 45 detik tanpa batas — di uji lapangan itu terdengar sebagai spam.
+	reminderSpacing           = 90 * time.Second
+	maxRemindersPerObligation = 2
+)
+
+// SetScorerProblem mencatat bahwa penilai semantik sudah diketahui tidak bisa
+// dipakai sejak startup. Pengingat berhenti — percuma menyuruh petugas
+// mengucapkan butir yang mustahil dinilai — dan layar diberi tahu.
+func (uc *ComplianceUsecase) SetScorerProblem(problem string) { uc.scorerProblem = problem }
+
+// SetLogger memasang logger. Opsional: tanpa logger, kegagalan penilai
+// tetap disiarkan ke layar, hanya tidak tercatat di log server.
+func (uc *ComplianceUsecase) SetLogger(l *slog.Logger) { uc.log = l }
 
 type spokenNudge struct {
 	words map[string]struct{}
@@ -68,6 +121,10 @@ func NewComplianceUsecase(
 		obligations: domain.DefaultObligations(),
 		degraded:    make(map[string]string),
 		nudges:      make(map[string][]spokenNudge),
+		scoringDown: make(map[string]bool),
+		fragments:   make(map[string][]officerFragment),
+		reminders:   make(map[string]*reminderLog),
+		now:         time.Now,
 	}
 }
 
@@ -139,6 +196,9 @@ func (uc *ComplianceUsecase) HandleTranscript(ctx context.Context, sessionID str
 
 	// Butir kewajiban hanya bisa dipenuhi oleh PETUGAS, bukan nasabah.
 	if u.Speaker != domain.SpeakerOfficer {
+		// Nasabah menyela: kalimat petugas sebelumnya sudah selesai, jangan
+		// dijahit dengan kalimat petugas berikutnya.
+		uc.resetFragments(sessionID)
 		return nil
 	}
 
@@ -169,7 +229,52 @@ func (uc *ComplianceUsecase) HandleTranscript(ctx context.Context, sessionID str
 		})
 		return nil
 	}
-	return uc.evaluateObligations(ctx, sessionID, u)
+	return uc.evaluateObligations(ctx, sessionID, u.ID, uc.stitchOfficerSentence(sessionID, u))
+}
+
+// stitchOfficerSentence menjahit potongan kalimat petugas yang terpotong di
+// jeda singkat, lalu mengembalikan teks gabungannya untuk dinilai.
+//
+// Ditemukan dari uji lapangan 28 Sep 2026: "perkenalkan nama saya handoko"
+// dan "dari bank nusantara" datang sebagai dua turn berjeda 1,5 detik.
+// Evidence gate IDENTITY butuh "nama saya" DAN "bank" dalam satu teks, jadi
+// kewajiban yang sudah diucapkan lengkap tidak pernah terpenuhi — dan
+// pengingatnya terus berbunyi.
+//
+// Hanya potongan berlabel PETUGAS yang dijahit, dan rantainya putus begitu
+// nasabah bicara. Ucapan nasabah tidak pernah bisa menjadi bagian bukti.
+// Bukti tetap menunjuk potongan terakhir — yang melengkapi kalimatnya.
+func (uc *ComplianceUsecase) stitchOfficerSentence(sessionID string, u *domain.Utterance) string {
+	current := officerFragment{text: strings.TrimSpace(u.Text), startMS: u.StartMS, endMS: u.EndMS}
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+
+	chain := uc.fragments[sessionID]
+	if n := len(chain); n > 0 {
+		prev := chain[n-1]
+		joinable := current.startMS > 0 &&
+			current.startMS >= prev.endMS &&
+			current.startMS-prev.endMS <= fragmentJoinGapMS &&
+			current.endMS-chain[0].startMS <= fragmentMaxSpanMS &&
+			n < fragmentMaxCount
+		if !joinable {
+			chain = nil
+		}
+	}
+	chain = append(chain, current)
+	uc.fragments[sessionID] = chain
+
+	parts := make([]string, len(chain))
+	for i, f := range chain {
+		parts[i] = f.text
+	}
+	return strings.Join(parts, " ")
+}
+
+func (uc *ComplianceUsecase) resetFragments(sessionID string) {
+	uc.mu.Lock()
+	delete(uc.fragments, sessionID)
+	uc.mu.Unlock()
 }
 
 // SetAudioQuality dipanggil adapter saat klien melaporkan kualitas audio.
@@ -289,7 +394,7 @@ func (uc *ComplianceUsecase) handleRevision(ctx context.Context, sessionID strin
 		return nil
 	}
 	uc.inspectGuardrail(ctx, sessionID, u)
-	return uc.evaluateObligations(ctx, sessionID, u)
+	return uc.evaluateObligations(ctx, sessionID, u.ID, u.Text)
 }
 
 func (uc *ComplianceUsecase) inspectGuardrail(ctx context.Context, sessionID string, u *domain.Utterance) {
@@ -311,10 +416,12 @@ func (uc *ComplianceUsecase) inspectGuardrail(ctx context.Context, sessionID str
 	})
 	warning := fmt.Sprintf("Hati-hati, hindari frasa %q.", phrase)
 	uc.rememberNudge(sessionID, warning)
-	_ = uc.nudger.Whisper(ctx, sessionID, warning)
+	_ = uc.nudger.Whisper(ctx, sessionID, Nudge{Text: warning, Kind: NudgeAvoidPhrase, Phrase: phrase})
 }
 
-func (uc *ComplianceUsecase) evaluateObligations(ctx context.Context, sessionID string, u *domain.Utterance) error {
+// evaluateObligations menilai text terhadap butir yang masih pending.
+// evidenceID adalah ucapan yang dicatat sebagai buktinya.
+func (uc *ComplianceUsecase) evaluateObligations(ctx context.Context, sessionID, evidenceID, text string) error {
 	states, err := uc.compliance.ListStates(ctx, sessionID)
 	if err != nil {
 		return err
@@ -331,21 +438,47 @@ func (uc *ComplianceUsecase) evaluateObligations(ctx context.Context, sessionID 
 		}
 		// Evidence gate menahan false-green dan menghemat panggilan LLM.
 		// LLM hanya menilai ucapan yang memiliki bukti minimum sesuai butir.
-		if !isEvidenceCandidate(ob.Code, u.Text) {
+		if !isEvidenceCandidate(ob.Code, text) {
 			continue
 		}
-		matched, conf, err := uc.matcher.Match(ctx, u.Text, ob)
-		if err != nil || !matched || conf < minimumMatchConfidence {
+		matched, conf, err := uc.matcher.Match(ctx, text, ob)
+		if err != nil {
+			// Tetap arah gagal yang aman — tidak ada centang hijau tanpa
+			// penilai — tetapi TIDAK boleh diam. Dulu error ini ditelan, dan
+			// akun yang kehilangan akses LLM Gateway hanya tampak sebagai
+			// checklist yang tak pernah hijau plus pengingat tanpa henti.
+			uc.reportScoringFailure(sessionID, ob.Code, evidenceID, err)
 			continue
 		}
-		if err := uc.compliance.MarkSatisfied(ctx, sessionID, ob.Code, u.ID, conf); err != nil {
+		if !matched || conf < minimumMatchConfidence {
+			continue
+		}
+		if err := uc.compliance.MarkSatisfied(ctx, sessionID, ob.Code, evidenceID, conf); err != nil {
 			return err
 		}
 		uc.broadcaster.Publish(sessionID, map[string]any{
-			"type": "obligation_satisfied", "code": ob.Code, "confidence": conf, "evidence_id": u.ID,
+			"type": "obligation_satisfied", "code": ob.Code, "confidence": conf, "evidence_id": evidenceID,
 		})
 	}
 	return nil
+}
+
+// reportScoringFailure mencatat setiap kegagalan penilai ke log, dan
+// memberi tahu layar SEKALI per sesi.
+func (uc *ComplianceUsecase) reportScoringFailure(sessionID, code, utteranceID string, err error) {
+	if uc.log != nil {
+		uc.log.Error("penilai semantik gagal; kewajiban tidak dinilai",
+			"sesi", sessionID, "kewajiban", code, "ucapan", utteranceID, "err", err)
+	}
+	uc.mu.Lock()
+	first := !uc.scoringDown[sessionID]
+	uc.scoringDown[sessionID] = true
+	uc.mu.Unlock()
+	if first {
+		uc.broadcaster.Publish(sessionID, map[string]any{
+			"type": "scoring_unavailable", "message": err.Error(),
+		})
+	}
 }
 
 // isEvidenceCandidate adalah pagar deterministik sebelum semantic match.
@@ -392,7 +525,16 @@ func containsAny(text string, candidates ...string) bool {
 
 // RemindPending membisikkan butir yang masih pending ke earpiece petugas.
 // Dipanggil oleh timer, bukan setiap ucapan, supaya tidak berisik.
+//
+// Dibatasi dua cara: paling sering sekali per reminderSpacing, dan tiap butir
+// paling banyak maxRemindersPerObligation kali. Butir yang sudah dua kali
+// diingatkan dilewati, jadi butir berikutnya yang dibisikkan — alih-alih
+// mengulang butir yang sama sampai sesi selesai.
 func (uc *ComplianceUsecase) RemindPending(ctx context.Context, sessionID string) error {
+	if uc.scorerProblem != "" {
+		uc.reportScoringFailure(sessionID, "", "", errors.New(uc.scorerProblem))
+		return nil
+	}
 	states, err := uc.compliance.ListStates(ctx, sessionID)
 	if err != nil {
 		return err
@@ -401,14 +543,35 @@ func (uc *ComplianceUsecase) RemindPending(ctx context.Context, sessionID string
 	for _, ob := range uc.obligations {
 		labels[ob.Code] = ob.Label
 	}
-	for _, st := range states {
-		if st.Status != domain.ObligationPending {
-			continue
-		}
-		// Bisikkan satu butir saja per pengingat.
-		reminder := "Belum disampaikan: " + labels[st.Code]
-		uc.rememberNudge(sessionID, reminder)
-		return uc.nudger.Whisper(ctx, sessionID, reminder)
+
+	now := uc.now()
+	uc.mu.Lock()
+	log := uc.reminders[sessionID]
+	if log == nil {
+		log = &reminderLog{count: map[string]int{}}
+		uc.reminders[sessionID] = log
 	}
-	return nil
+	if !log.last.IsZero() && now.Sub(log.last) < reminderSpacing {
+		uc.mu.Unlock()
+		return nil
+	}
+	code := ""
+	for _, st := range states {
+		if st.Status == domain.ObligationPending && log.count[st.Code] < maxRemindersPerObligation {
+			code = st.Code
+			break
+		}
+	}
+	if code != "" {
+		log.last = now
+		log.count[code]++
+	}
+	uc.mu.Unlock()
+	if code == "" {
+		return nil
+	}
+
+	reminder := "Belum disampaikan: " + labels[code]
+	uc.rememberNudge(sessionID, reminder)
+	return uc.nudger.Whisper(ctx, sessionID, Nudge{Text: reminder, Kind: NudgePendingObligation, Code: code})
 }

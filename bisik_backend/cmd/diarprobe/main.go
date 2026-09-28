@@ -27,6 +27,7 @@ func main() {
 	model := flag.String("model", "whisper-rt", "speech_model")
 	interval := flag.Int("interval", 5000, "speaker_labels_revision_interval_ms")
 	maxSpeakers := flag.Int("max-speakers", 3, "max_speakers")
+	rawTurns := flag.Bool("raw-turns", false, "cetak JSON mentah tiap Turn")
 	extra := flag.String("extra", "", "parameter tambahan, mis. language_code=id&format_turns=true")
 	flag.Parse()
 
@@ -102,6 +103,9 @@ func main() {
 			case "Turn":
 				if !probe.EndOfTurn || probe.Transcript == "" {
 					continue
+				}
+				if *rawTurns {
+					fmt.Printf("RAW %s\n", string(raw))
 				}
 				speakers := map[string]int{}
 				for _, w := range probe.Words {

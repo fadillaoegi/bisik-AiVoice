@@ -1,0 +1,186 @@
+SKRIP UJI DIALOG BISIK — DUA BAHASA
+═══════════════════════════════════════════════════════════════════════
+
+CERITANYA
+  Pak Budi, pemilik warung, ingin meminjam Rp10 juta untuk modal. Handoko,
+  petugas Bank Nusantara, datang menawarkan kredit. Di tengah percakapan
+  Handoko keceplosan menjanjikan pinjaman pasti disetujui — Bisik
+  membisikkan peringatan, Handoko meluruskannya, lalu menyampaikan kelima
+  kewajiban.
+
+  Angkanya konsisten: Rp10 juta × bunga 1,2% × 12 bulan = bunga Rp1,44 juta.
+  Total Rp11,44 juta ÷ 12 ≈ cicilan Rp953 ribu per bulan.
+
+ATURAN
+  ▶  PETUGAS: ucapkan kalimatnya PERSIS dalam Bahasa Indonesia. Baris "EN:"
+     hanya terjemahan, jangan diucapkan — penilai kepatuhan hanya mengenali
+     Bahasa Indonesia (versi Inggrisnya hanya meloloskan 1 dari 5 kewajiban).
+  ▶  NASABAH: pilih ID atau EN, bebas. Ucapan nasabah tidak pernah dinilai;
+     transkrip menampilkannya dalam bahasa aslinya.
+  ▶  Jeda 1–2 detik setiap ganti pembicara, jangan menyela.
+
+PERSIAPAN
+  · Dua orang; petugas memakai earphone. Musik dan TV mati.
+  · Banner backend menyatakan mode DUA STREAM.
+  · Login sebagai petugas Handoko: username petugas2.
+    ("Pak" boleh diganti "Bu" sesuai nasabahnya.)
+
+Setiap kalimat petugas sudah diuji ke penilai sungguhan (28 Sep 2026) dan
+hanya mengenai kewajiban targetnya — termasuk bila angkanya ditranskrip
+sebagai "953.000" atau "sembilan ratus lima puluh tiga ribu".
+
+
+───────────────────────────────────────────────────────────────────────
+0 · KALIBRASI                                            (tidak dinilai)
+───────────────────────────────────────────────────────────────────────
+Ucapkan kalimat yang tampil di layar — isinya ikut bahasa aplikasi.
+
+  PETUGAS   "Saya petugas yang menjalankan sesi ini."
+            EN mode: "I am the officer running this session."
+
+  NASABAH   "Saya nasabah dan siap memulai."
+            EN mode: "I am the customer and I am ready to begin."
+
+  → Tekan "Konfirmasi dan mulai penilaian".
+
+
+───────────────────────────────────────────────────────────────────────
+1 · PERKENALAN                                             → IDENTITY
+───────────────────────────────────────────────────────────────────────
+  PETUGAS ▶ "Selamat pagi, Pak. Perkenalkan, nama saya Handoko dari
+             Bank Nusantara."
+             EN: Good morning, sir. Let me introduce myself — my name
+                 is Handoko from Bank Nusantara.
+
+  NASABAH   ID  "Pagi. Saya mau pinjam sekitar sepuluh juta untuk
+                 modal warung."
+            EN  "Good morning. I'd like to borrow about ten million
+                 for my shop."
+
+  PETUGAS ▶ "Bisa, Pak. Untuk modal usaha, kami punya kredit multiguna."
+             EN: Certainly, sir. For business capital we have a
+                 multipurpose loan.
+
+  ✓ Identitas & lembaga hijau · ●○○○○
+
+
+───────────────────────────────────────────────────────────────────────
+2 · KECEPLOSAN, LALU DILURUSKAN                          → PELANGGARAN
+───────────────────────────────────────────────────────────────────────
+  NASABAH   ID  "Kalau saya ajukan hari ini, apakah pasti diterima?"
+            EN  "If I apply today, will it definitely be accepted?"
+
+  PETUGAS ▶ "Tenang saja, Pak, pengajuan ini pasti disetujui."
+             EN: Don't worry, sir, this application is guaranteed to
+                 be approved.                        ← sengaja salah
+
+  ✓ Kotak merah pelanggaran "pasti disetujui"
+  ✓ Earphone berbisik: "Hati-hati, hindari frasa "pasti disetujui"."
+
+  Handoko mendengar bisikan itu dan langsung meluruskan:
+
+  PETUGAS ▶ "Maaf, saya koreksi. Persetujuan tetap melalui penilaian
+             dulu, Pak."
+             EN: Sorry, let me correct that. Approval still has to go
+                 through an assessment first, sir.
+
+  ✓ Tidak ada pelanggaran kedua. (Jangan mengulang kata "pasti
+    disetujui" saat meluruskan — itu akan tercatat lagi.)
+
+
+───────────────────────────────────────────────────────────────────────
+3 · BUNGA                                                      → RATE
+───────────────────────────────────────────────────────────────────────
+  NASABAH   ID  "Oh, begitu. Bunganya berapa?"
+            EN  "I see. What's the interest rate?"
+
+  PETUGAS ▶ "Suku bunganya 1,2 persen setiap bulan, dengan biaya
+             administrasi seratus ribu rupiah."
+             EN: The interest rate is 1.2 percent a month, plus an
+                 administration fee of one hundred thousand rupiah.
+
+  ✓ Suku bunga / biaya hijau · ●●○○○
+
+
+───────────────────────────────────────────────────────────────────────
+4 · CICILAN                                                   → TENOR
+───────────────────────────────────────────────────────────────────────
+  NASABAH   ID  "Terus cicilannya berapa per bulan, dan berapa lama?"
+            EN  "So how much is the monthly payment, and for how long?"
+
+  PETUGAS ▶ "Tenornya 12 bulan, dengan cicilan sekitar 953 ribu rupiah
+             per bulan."
+             EN: The term is 12 months, with instalments of about
+                 953 thousand rupiah per month.
+
+  ✓ Jangka waktu & cicilan hijau · ●●●○○
+
+
+───────────────────────────────────────────────────────────────────────
+5 · KALAU TELAT                                             → PENALTY
+───────────────────────────────────────────────────────────────────────
+  NASABAH   ID  "Kalau warung lagi sepi dan saya telat bayar, bagaimana?"
+            EN  "What if business is slow and I pay late?"
+
+  PETUGAS ▶ "Kalau terlambat membayar, ada denda lima ribu rupiah per
+             hari."
+             EN: If you pay late, there is a penalty of five thousand
+                 rupiah per day.
+
+  ✓ Denda keterlambatan hijau · ●●●●○
+
+
+───────────────────────────────────────────────────────────────────────
+6 · KALAU BERUBAH PIKIRAN                                     → RIGHT
+───────────────────────────────────────────────────────────────────────
+  NASABAH   ID  "Saya diskusikan dulu dengan istri. Kalau nanti saya
+                 berubah pikiran, bagaimana?"
+            EN  "I'll talk it over with my wife first. What if I change
+                 my mind later?"
+
+  PETUGAS ▶ "Bapak berhak menolak atau membatalkan penawaran ini."
+             EN: You have the right to refuse or cancel this offer, sir.
+
+  ✓ Hak membatalkan hijau · ●●●●● · kartu "Lengkap"
+
+
+───────────────────────────────────────────────────────────────────────
+7 · PENUTUP                                              (tidak dinilai)
+───────────────────────────────────────────────────────────────────────
+  NASABAH   ID  "Baik, terima kasih atas penjelasannya. Saya kabari lagi."
+            EN  "Alright, thank you for explaining. I'll let you know."
+
+  PETUGAS ▶ "Silakan, Pak. Terima kasih atas waktunya."
+             EN: Of course, sir. Thank you for your time.
+
+  → Tunggu 2 detik sampai kalimat terakhir tampil di transkrip sebagai
+    Petugas, lalu tekan "Akhiri sesi".
+
+
+───────────────────────────────────────────────────────────────────────
+HASIL YANG DIHARAPKAN DI LAPORAN
+───────────────────────────────────────────────────────────────────────
+  · Skor 90/100 — 5 kewajiban terpenuhi, dikurangi 10 untuk 1 pelanggaran
+  · Kewajiban 5/5, tiap butir membawa kutipan kalimat petugas di atas
+  · Satu pelanggaran: "pasti disetujui"
+  · Transkrip membedakan Petugas dan Nasabah; baris nasabah berbahasa
+    Inggris tampil dalam Bahasa Inggris
+  · Kalimat kalibrasi TIDAK ada di laporan
+
+
+───────────────────────────────────────────────────────────────────────
+KALAU TIDAK SESUAI
+───────────────────────────────────────────────────────────────────────
+Butir tidak hijau padahal sudah diucapkan
+  → Pastikan yang diucapkan kalimat Bahasa Indonesianya, persis.
+    Confidence di bawah 80% juga sengaja tidak dihitung.
+
+Muncul pelanggaran kedua
+  → Kata "pasti disetujui" terucap lagi saat meluruskan, atau bisikan
+    terekam ulang karena tidak memakai earphone.
+
+Ucapan nasabah berbahasa Inggris tertulis aneh atau setengah Indonesia
+  → Jeda antar-pembicara terlalu pendek. Beri jeda 1–2 detik.
+
+Masalah lain (checklist tidak termuat, audio pelan, musik): lihat bagian
+"KALAU TIDAK SESUAI" di skrip-uji-dialog.txt.

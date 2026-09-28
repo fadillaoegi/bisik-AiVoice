@@ -155,6 +155,8 @@ class SessionWsDataSource {
               )
             : const SessionWarningReceived(null),
       'session_error' => SessionErrorReceived(json['message'] as String?),
+      'scoring_unavailable' =>
+        ScoringUnavailable(json['message'] as String? ?? ''),
       _ => const UnknownEvent(),
     };
   }

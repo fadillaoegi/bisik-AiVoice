@@ -3,7 +3,9 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/bisik/bisik_backend/internal/domain"
 )
@@ -76,10 +78,12 @@ type matcherFake struct {
 	confidence float64
 	err        error
 	calls      int
+	texts      []string
 }
 
-func (f *matcherFake) Match(context.Context, string, domain.Obligation) (bool, float64, error) {
+func (f *matcherFake) Match(_ context.Context, text string, _ domain.Obligation) (bool, float64, error) {
 	f.calls++
+	f.texts = append(f.texts, text)
 	return f.matched, f.confidence, f.err
 }
 
@@ -94,10 +98,14 @@ func (f *guardFake) Inspect(context.Context, string) (string, string, bool, erro
 	return f.phrase, f.severity, f.found, f.err
 }
 
-type nudgerFake struct{ messages []string }
+type nudgerFake struct {
+	messages []string
+	nudges   []Nudge
+}
 
-func (f *nudgerFake) Whisper(_ context.Context, _ string, message string) error {
-	f.messages = append(f.messages, message)
+func (f *nudgerFake) Whisper(_ context.Context, _ string, nudge Nudge) error {
+	f.messages = append(f.messages, nudge.Text)
+	f.nudges = append(f.nudges, nudge)
 	return nil
 }
 
@@ -251,6 +259,32 @@ func TestHandleTranscriptMencatatJanjiTerlarangDanMembisikkan(t *testing.T) {
 	if len(nudger.messages) != 1 {
 		t.Fatalf("nudge = %v, mau satu pesan", nudger.messages)
 	}
+	// Klien berbahasa Inggris menyusun ulang teks dari field ini, jadi
+	// frasanya harus ikut terkirim apa adanya.
+	if n := nudger.nudges[0]; n.Kind != NudgeAvoidPhrase || n.Phrase != "pasti cair" {
+		t.Fatalf("nudge = %+v, mau kind=%s phrase=pasti cair", n, NudgeAvoidPhrase)
+	}
+}
+
+// Teks yang diucapkan tetap Bahasa Indonesia apa pun bahasa antarmukanya:
+// kalimat itu yang dicocokkan isNudgeEcho. Kode butirnya ikut dikirim agar
+// klien bisa menampilkannya dalam bahasa lain.
+func TestRemindPendingMengirimKodeKewajiban(t *testing.T) {
+	uc, _, _, nudger := newComplianceTestUsecase(pendingState("PENALTY"), &matcherFake{}, &guardFake{})
+
+	if err := uc.RemindPending(context.Background(), sessionIDForTest); err != nil {
+		t.Fatalf("RemindPending(): %v", err)
+	}
+	if len(nudger.nudges) != 1 {
+		t.Fatalf("nudge = %v, mau satu", nudger.nudges)
+	}
+	n := nudger.nudges[0]
+	if n.Kind != NudgePendingObligation || n.Code != "PENALTY" {
+		t.Fatalf("nudge = %+v, mau kind=%s code=PENALTY", n, NudgePendingObligation)
+	}
+	if n.Text != "Belum disampaikan: Denda keterlambatan" {
+		t.Fatalf("text = %q, harus tetap kalimat Bahasa Indonesia", n.Text)
+	}
 }
 
 func TestEvidenceCandidateButirUtama(t *testing.T) {
@@ -291,6 +325,31 @@ func TestHandleTranscriptMengabaikanErrorMatcherTanpaFalseGreen(t *testing.T) {
 	}
 	if len(compliance.marked) != 0 {
 		t.Fatalf("error matcher tidak boleh menjadi tanda hijau: %v", compliance.marked)
+	}
+}
+
+// Akun tanpa akses LLM Gateway: tetap tidak ada centang hijau, tetapi layar
+// petugas WAJIB diberi tahu — dan cukup sekali per sesi, bukan tiap ucapan.
+func TestErrorPenilaiDisiarkanSekaliPerSesi(t *testing.T) {
+	matcher := &matcherFake{err: errors.New("LLM Gateway HTTP 400: Your account does not have access to this LLM Gateway model")}
+	uc, compliance, broadcaster := newComplianceTestUsecaseWithEvents(pendingState("PENALTY"), matcher, &guardFake{})
+
+	for _, id := range []string{"u-1", "u-2", "u-3"} {
+		if err := uc.HandleTranscript(context.Background(), sessionIDForTest, TranscriptEvent{
+			UtteranceID: id, Speaker: domain.SpeakerOfficer,
+			Text: "Kalau terlambat ada denda.", IsFinal: true,
+		}); err != nil {
+			t.Fatalf("HandleTranscript(%s): %v", id, err)
+		}
+	}
+	if matcher.calls != 3 {
+		t.Fatalf("matcher dipanggil %d kali, mau 3 — ucapan berikutnya tetap harus dicoba", matcher.calls)
+	}
+	if len(compliance.marked) != 0 {
+		t.Fatalf("error penilai tidak boleh menjadi tanda hijau: %v", compliance.marked)
+	}
+	if n := countEventType(broadcaster.events, "scoring_unavailable"); n != 1 {
+		t.Fatalf("scoring_unavailable disiarkan %d kali, mau tepat 1", n)
 	}
 }
 
@@ -497,5 +556,129 @@ func TestUcapanSahTidakDikiraGema(t *testing.T) {
 
 	if len(compliance.marked) != 1 || compliance.marked[0] != "PENALTY" {
 		t.Fatalf("marked = %v, mau [PENALTY] — kalimat petugas yang sah", compliance.marked)
+	}
+}
+
+// ── Potongan kalimat petugas ─────────────────────────────────────────────
+// Data di bawah diambil persis dari uji lapangan 28 Sep 2026 (sesi 3bedcc68):
+// whisper-rt memotong perkenalan petugas menjadi dua turn berjeda 1,5 detik.
+
+func officerTurn(id, text string, startMS, endMS int) TranscriptEvent {
+	return TranscriptEvent{UtteranceID: id, Speaker: domain.SpeakerOfficer, Text: text,
+		StartMS: startMS, EndMS: endMS, IsFinal: true}
+}
+
+func TestPotonganKalimatPetugasDijahitSebelumDinilai(t *testing.T) {
+	matcher := &matcherFake{matched: true, confidence: 0.95}
+	uc, compliance, _, _ := newComplianceTestUsecase(pendingState("IDENTITY"), matcher, &guardFake{})
+	ctx := context.Background()
+
+	_ = uc.HandleTranscript(ctx, sessionIDForTest, officerTurn("u-1", "perkenalkan nama saya handoko", 32140, 34300))
+	if len(compliance.marked) != 0 {
+		t.Fatalf("potongan pertama saja belum boleh memenuhi: %v", compliance.marked)
+	}
+	_ = uc.HandleTranscript(ctx, sessionIDForTest, officerTurn("u-2", "dari bank nusantara", 35830, 37330))
+
+	if len(compliance.marked) != 1 || compliance.marked[0] != "IDENTITY" {
+		t.Fatalf("marked = %v, mau IDENTITY dari kalimat gabungan", compliance.marked)
+	}
+	if got := matcher.texts[len(matcher.texts)-1]; got != "perkenalkan nama saya handoko dari bank nusantara" {
+		t.Fatalf("matcher menilai %q, mau kalimat utuh", got)
+	}
+	if ev := compliance.states[0].EvidenceID; ev != "u-2" {
+		t.Fatalf("bukti = %q, mau potongan yang melengkapi kalimat (u-2)", ev)
+	}
+}
+
+func TestPotonganTidakDijahitKalauJedanyaPanjang(t *testing.T) {
+	matcher := &matcherFake{matched: true, confidence: 0.95}
+	uc, compliance, _, _ := newComplianceTestUsecase(pendingState("IDENTITY"), matcher, &guardFake{})
+	ctx := context.Background()
+
+	_ = uc.HandleTranscript(ctx, sessionIDForTest, officerTurn("u-1", "perkenalkan nama saya handoko", 32140, 34300))
+	// 2,5 detik kemudian — sudah kalimat lain.
+	_ = uc.HandleTranscript(ctx, sessionIDForTest, officerTurn("u-2", "dari bank nusantara", 36800, 38300))
+	if len(compliance.marked) != 0 {
+		t.Fatalf("kalimat terpisah tidak boleh dijahit: %v", compliance.marked)
+	}
+}
+
+// Ucapan nasabah tidak boleh pernah menjadi bagian bukti petugas.
+func TestNasabahMenyelaMemutusJahitan(t *testing.T) {
+	matcher := &matcherFake{matched: true, confidence: 0.95}
+	uc, compliance, _, _ := newComplianceTestUsecase(pendingState("IDENTITY"), matcher, &guardFake{})
+	ctx := context.Background()
+
+	_ = uc.HandleTranscript(ctx, sessionIDForTest, officerTurn("u-1", "perkenalkan nama saya handoko", 32140, 34300))
+	_ = uc.HandleTranscript(ctx, sessionIDForTest, TranscriptEvent{UtteranceID: "u-2", Speaker: domain.SpeakerCustomer,
+		Text: "oh iya", StartMS: 34500, EndMS: 34900, IsFinal: true})
+	_ = uc.HandleTranscript(ctx, sessionIDForTest, officerTurn("u-3", "dari bank nusantara", 35300, 36800))
+	if len(compliance.marked) != 0 {
+		t.Fatalf("jahitan melewati ucapan nasabah: %v", compliance.marked)
+	}
+}
+
+func TestPotonganBerlabelNasabahTidakIkutDijahit(t *testing.T) {
+	matcher := &matcherFake{matched: true, confidence: 0.95}
+	uc, compliance, _, _ := newComplianceTestUsecase(pendingState("IDENTITY"), matcher, &guardFake{})
+	ctx := context.Background()
+
+	_ = uc.HandleTranscript(ctx, sessionIDForTest, TranscriptEvent{UtteranceID: "u-1", Speaker: domain.SpeakerCustomer,
+		Text: "perkenalkan nama saya handoko", StartMS: 32140, EndMS: 34300, IsFinal: true})
+	_ = uc.HandleTranscript(ctx, sessionIDForTest, officerTurn("u-2", "dari bank nusantara", 35830, 37330))
+	if len(compliance.marked) != 0 {
+		t.Fatalf("kata-kata nasabah ikut menjadi bukti petugas: %v", compliance.marked)
+	}
+}
+
+// ── Pengingat ────────────────────────────────────────────────────────────
+
+func twoPending() []*domain.ObligationState {
+	return []*domain.ObligationState{
+		{SessionID: sessionIDForTest, Code: "IDENTITY", Status: domain.ObligationPending},
+		{SessionID: sessionIDForTest, Code: "RATE", Status: domain.ObligationPending},
+	}
+}
+
+func TestPengingatDiberiJarakDanBatas(t *testing.T) {
+	uc, _, _, nudger := newComplianceTestUsecase(twoPending(), &matcherFake{}, &guardFake{})
+	clock := time.Date(2026, 9, 28, 22, 0, 0, 0, time.UTC)
+	uc.now = func() time.Time { return clock }
+	ctx := context.Background()
+
+	// Timer berdetak tiap 45 detik selama 7,5 menit.
+	for i := 0; i < 10; i++ {
+		if err := uc.RemindPending(ctx, sessionIDForTest); err != nil {
+			t.Fatalf("RemindPending(): %v", err)
+		}
+		clock = clock.Add(45 * time.Second)
+	}
+
+	var codes []string
+	for _, n := range nudger.nudges {
+		codes = append(codes, n.Code)
+	}
+	// 90 detik jarak minimal, 2 kali per butir, lalu diam.
+	want := "IDENTITY,IDENTITY,RATE,RATE"
+	if got := strings.Join(codes, ","); got != want {
+		t.Fatalf("urutan bisikan = %s, mau %s", got, want)
+	}
+}
+
+func TestPenilaiMatiTidakAdaPengingat(t *testing.T) {
+	compliance := &complianceRepoFake{states: twoPending()}
+	nudger := &nudgerFake{}
+	broadcaster := &broadcasterFake{}
+	uc := NewComplianceUsecase(compliance, newTranscriptRepoFake(), &matcherFake{}, &guardFake{}, nudger, broadcaster)
+	uc.SetScorerProblem("HTTP 400: Your account does not have access to this LLM Gateway model")
+
+	for i := 0; i < 3; i++ {
+		_ = uc.RemindPending(context.Background(), sessionIDForTest)
+	}
+	if len(nudger.nudges) != 0 {
+		t.Fatalf("pengingat tetap berbunyi padahal penilai mati: %d", len(nudger.nudges))
+	}
+	if n := countEventType(broadcaster.events, "scoring_unavailable"); n != 1 {
+		t.Fatalf("scoring_unavailable = %d kali, mau 1", n)
 	}
 }

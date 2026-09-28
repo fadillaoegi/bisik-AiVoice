@@ -31,6 +31,22 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
     });
   }
 
+  /// Keluar sekaligus membuang laporan dan checklist di layar. Tanpa ini
+  /// laporan petugas sebelumnya masih terpampang untuk siapa pun yang masuk
+  /// berikutnya di HP yang sama.
+  ///
+  /// Selalu dikonfirmasi dulu: salah ketuk berarti mengetik ulang kata sandi
+  /// di depan nasabah. Pilihan bawaan (ketuk di luar, tombol kembali) = Batal.
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => const _ConfirmSignOut(),
+    );
+    if (confirmed != true || !mounted) return;
+    ref.read(sessionControllerProvider.notifier).clear();
+    ref.read(authControllerProvider.notifier).logout();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(sessionControllerProvider);
@@ -52,11 +68,14 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
             child: Center(child: LanguageSwitch()),
           ),
           if (!running)
-            IconButton(
-              tooltip: context.s.signOut,
-              icon: const Icon(Icons.logout, size: 20),
-              color: BisikColors.muted,
-              onPressed: ref.read(authControllerProvider.notifier).logout,
+            TextButton.icon(
+              onPressed: _logout,
+              style: TextButton.styleFrom(
+                foregroundColor: BisikColors.text,
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.logout, size: 18),
+              label: Text(context.s.signOut),
             ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -185,6 +204,13 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
           const SizedBox(height: 12),
           _Banner(text: s.describe(state.error!), color: BisikColors.bad),
         ],
+        if (state.scoringError != null) ...[
+          const SizedBox(height: 12),
+          _Banner(
+            text: '${s.scoringUnavailable}\n${state.scoringError}',
+            color: BisikColors.bad,
+          ),
+        ],
         // Bagian yang tidak dihitung sebagai bukti harus terlihat: checklist
         // yang diam tanpa penjelasan membuat petugas mengira sistemnya rusak.
         if (state.warning != null) ...[
@@ -248,14 +274,26 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
         ],
         const SizedBox(height: 12),
         OutlinedButton(
-          onPressed: controller.end,
+          onPressed: state.ending ? null : controller.end,
           style: OutlinedButton.styleFrom(
             foregroundColor: BisikColors.bad,
+            // Tetap merah saat memproses: abu-abu berarti "tidak bisa
+            // dipakai", padahal yang ingin disampaikan "sedang bekerja".
+            disabledForegroundColor: BisikColors.bad,
             side: const BorderSide(color: BisikColors.bad),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Text(s.endSession),
+            child: state.ending
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const BisikWave(height: 18, color: BisikColors.bad),
+                      const SizedBox(width: 12),
+                      Text(s.endingSession),
+                    ],
+                  )
+                : Text(s.endSession),
           ),
         ),
       ],
@@ -318,6 +356,49 @@ class _Disclosure extends StatelessWidget {
         childrenPadding: const EdgeInsets.only(bottom: 12),
         children: [child],
       ),
+    );
+  }
+}
+
+class _ConfirmSignOut extends StatelessWidget {
+  const _ConfirmSignOut();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.s;
+    return AlertDialog(
+      backgroundColor: BisikColors.surface,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: BisikColors.border),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      title: Text(
+        s.signOutTitle,
+        style: const TextStyle(
+          color: BisikColors.text,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      content: Text(
+        s.signOutBody,
+        style: const TextStyle(color: BisikColors.muted, fontSize: 14),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          style: TextButton.styleFrom(foregroundColor: BisikColors.text),
+          child: Text(s.cancel),
+        ),
+        OutlinedButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: BisikColors.bad,
+            side: const BorderSide(color: BisikColors.bad),
+          ),
+          child: Text(s.signOut),
+        ),
+      ],
     );
   }
 }

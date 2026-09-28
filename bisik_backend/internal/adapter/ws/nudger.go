@@ -1,6 +1,10 @@
 package ws
 
-import "context"
+import (
+	"context"
+
+	"github.com/bisik/bisik_backend/internal/usecase"
+)
 
 // HubNudger membisikkan pengingat HANYA ke klien berperan officer.
 //
@@ -12,10 +16,13 @@ type HubNudger struct{ hub *Hub }
 
 func NewHubNudger(h *Hub) *HubNudger { return &HubNudger{hub: h} }
 
-func (n *HubNudger) Whisper(_ context.Context, sessionID, text string) error {
+func (n *HubNudger) Whisper(_ context.Context, sessionID string, nudge usecase.Nudge) error {
 	n.hub.PublishTo(sessionID, "officer", map[string]any{
-		"type": "nudge",
-		"text": text,
+		"type":   "nudge",
+		"text":   nudge.Text,
+		"kind":   nudge.Kind,
+		"code":   nudge.Code,
+		"phrase": nudge.Phrase,
 	})
 	return nil
 }

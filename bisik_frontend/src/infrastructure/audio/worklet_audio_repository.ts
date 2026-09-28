@@ -1,7 +1,8 @@
-import type {
-  AudioProcessing,
-  AudioQualityReason,
-  AudioRepository,
+import {
+  AUDIO_REASONS,
+  type AudioProcessing,
+  type AudioQualityReason,
+  type AudioRepository,
 } from '../../domain/repositories/audio_repository'
 
 const TARGET_SAMPLE_RATE = 16_000
@@ -38,10 +39,10 @@ const HIGHPASS_HZ = 85
 /** Menerjemahkan satu jendela pengukuran menjadi alasan, '' kalau sehat. */
 export function verdictFor(stats: AudioStats): AudioQualityReason {
   if (stats.peak < SILENCE_PEAK) return ''
-  if (stats.clippedRatio > CLIP_RATIO) return 'Suara terlalu keras dan pecah'
-  if (stats.rms < QUIET_RMS) return 'Suara terlalu pelan dari mikrofon'
+  if (stats.clippedRatio > CLIP_RATIO) return AUDIO_REASONS.tooLoud
+  if (stats.rms < QUIET_RMS) return AUDIO_REASONS.tooQuiet
   if (stats.rms > NOISY_RMS && stats.peak / stats.rms < NOISY_CREST) {
-    return 'Kebisingan latar terlalu tinggi — matikan musik atau pindah ke tempat lebih tenang'
+    return AUDIO_REASONS.noisy
   }
   return ''
 }

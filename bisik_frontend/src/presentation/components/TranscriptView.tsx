@@ -1,10 +1,5 @@
 import type { Speaker, Utterance } from '../../domain/entities/session'
-
-const speakerLabel: Record<Speaker, string> = {
-  officer: 'Petugas',
-  customer: 'Nasabah',
-  unknown: '—',
-}
+import { useI18n } from '../i18n/useI18n'
 
 interface Props {
   utterances: Utterance[]
@@ -12,6 +7,8 @@ interface Props {
 }
 
 export function TranscriptView({ utterances, partial }: Props) {
+  const { t } = useI18n()
+  const speakerLabel = t.speakers
   return (
     <div className="transcript">
       {utterances.map((u) => (
@@ -22,7 +19,7 @@ export function TranscriptView({ utterances, partial }: Props) {
           {u.sourceSpeaker && <span className="line__source">{u.sourceSpeaker}</span>}{' '}
           {u.text}
           {/* Label direvisi diarization — tonjolkan, jangan disembunyikan */}
-          {u.revised && <em className="line__revised">label dikoreksi</em>}
+          {u.revised && <em className="line__revised">{t.transcript.corrected}</em>}
         </p>
       ))}
       {partial && (

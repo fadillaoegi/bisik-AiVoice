@@ -28,9 +28,14 @@ import { TranscriptView } from '../../components/TranscriptView'
 import { ScoreBadge } from '../../components/ScoreBadge'
 import { BisikWave } from '../../components/BisikWave'
 import { LoginForm } from '../../components/LoginForm'
+import { LanguageSwitch } from '../../components/LanguageSwitch'
+import { AccountBar } from '../../components/AccountBar'
+import { useI18n } from '../../i18n/useI18n'
+import { localizeError } from '../../i18n/localize'
 
 export function SupervisorPage() {
   const dispatch = useAppDispatch()
+  const { t } = useI18n()
   const [watching, setWatching] = useState<string | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [listError, setListError] = useState<string | null>(null)
@@ -104,56 +109,59 @@ export function SupervisorPage() {
     }
   }
 
+  /**
+   * Keluar sekaligus melupakan sesi yang sedang dipantau. Tanpa ini akun
+   * berikutnya yang masuk di peramban yang sama langsung mendarat di sesi
+   * pantauan orang sebelumnya.
+   */
+  function handleLogout() {
+    setWatching(null)
+    setSessions([])
+    setLoadingList(true)
+    dispatch(complianceReset())
+    dispatch(transcriptCleared())
+    container.repositories.auth.logout()
+    dispatch(loggedOut())
+  }
+
   return (
     <main className="page page--supervisor">
       <header className="page__head">
         <div>
-          <h1>Bisik Supervisor</h1>
-          <p className="brandline">Pemantauan kepatuhan berbasis bukti</p>
+          <h1>{t.brand.supervisorTitle}</h1>
+          <p className="brandline">{t.brand.supervisorTagline}</p>
         </div>
-        <ScoreBadge score={score} />
+        <div className="page__tools">
+          <LanguageSwitch />
+          <ScoreBadge score={score} />
+        </div>
       </header>
 
       {authRestoring ? (
         <p className="loading">
           <BisikWave />
-          Memeriksa sesi login…
+          {t.auth.checkingSession}
         </p>
       ) : !authUser ? (
         <LoginForm
           expects="supervisor"
-          title="Masuk sebagai supervisor"
-          hint="Supervisor memantau dan membaca laporan, tidak pernah mengirim audio."
+          title={t.auth.supervisorTitle}
+          hint={t.auth.supervisorHint}
         />
       ) : !watching ? (
         <section className="start">
-          <p className="whoami">
-            <span>
-              Masuk sebagai <strong>{authUser.name}</strong>
-            </span>
-            <button
-              className="btn--link"
-              onClick={() => {
-                container.repositories.auth.logout()
-                dispatch(loggedOut())
-              }}
-            >
-              Keluar
-            </button>
-          </p>
+          <AccountBar name={authUser.name} onLogout={handleLogout} />
 
-          <h2>Sesi terbaru</h2>
+          <h2>{t.supervisor.recent}</h2>
           {loadingList ? (
             <p className="loading">
               <BisikWave />
-              Memuat daftar sesi…
+              {t.supervisor.loadingList}
             </p>
           ) : listError ? (
-            <p className="error-box">{listError}</p>
+            <p className="error-box">{localizeError(t, listError)}</p>
           ) : sessions.length === 0 ? (
-            <p className="muted">
-              Belum ada sesi. Mulai satu dari halaman petugas, lalu segarkan.
-            </p>
+            <p className="muted">{t.supervisor.empty}</p>
           ) : (
             <ul className="session-list">
               {sessions.map((s) => (
@@ -162,13 +170,13 @@ export function SupervisorPage() {
                     {opening === s.id ? (
                       <span className="btn__busy">
                         <BisikWave />
-                        Memuat sesi…
+                        {t.supervisor.loadingSession}
                       </span>
                     ) : (
                       <>
-                        {s.productId} · {s.status === 'active' ? 'berjalan' : 'selesai'}
+                        {s.productId} · {s.status === 'active' ? t.supervisor.active : t.supervisor.ended}
                         <small>
-                          {new Date(s.startedAt).toLocaleString('id-ID')} · {s.id}
+                          {new Date(s.startedAt).toLocaleString(t.locale)} · {s.id}
                         </small>
                       </>
                     )}
@@ -178,7 +186,7 @@ export function SupervisorPage() {
             </ul>
           )}
 
-          {openError && <p className="error-box">{openError}</p>}
+          {openError && <p className="error-box">{localizeError(t, openError)}</p>}
 
           <button
             className="btn btn--secondary"
@@ -187,7 +195,7 @@ export function SupervisorPage() {
               void refresh()
             }}
           >
-            Segarkan daftar
+            {t.supervisor.refresh}
           </button>
         </section>
       ) : (
@@ -203,28 +211,28 @@ export function SupervisorPage() {
                 dispatch(transcriptCleared())
               }}
             >
-              ← Kembali ke daftar sesi
+              {t.supervisor.back}
             </button>
           </div>
 
           <section>
-            <h2>Kewajiban</h2>
+            <h2>{t.supervisor.obligations}</h2>
             <ObligationList items={obligations} />
             <p className="status">
               <span className={`dot ${connected ? 'dot--on' : 'dot--off'}`} />
-              {connected ? 'Live' : 'Terputus'}
+              {connected ? t.supervisor.live : t.supervisor.disconnected}
             </p>
           </section>
 
           <section>
-            <h2>Pelanggaran</h2>
+            <h2>{t.supervisor.violations}</h2>
             {violations.length === 0 ? (
-              <p className="muted">Belum ada.</p>
+              <p className="muted">{t.supervisor.none}</p>
             ) : (
               <ul className="violations">
                 {violations.map((v, i) => (
                   <li key={`${v.phrase}-${i}`} className="violation">
-                    <strong>{v.phrase}</strong> <span>{v.severity}</span>
+                    <strong>{v.phrase}</strong> <span>{t.severity[v.severity] ?? v.severity}</span>
                   </li>
                 ))}
               </ul>
@@ -232,7 +240,7 @@ export function SupervisorPage() {
           </section>
 
           <section className="grid__wide">
-            <h2>Transkrip</h2>
+            <h2>{t.supervisor.transcript}</h2>
             <TranscriptView utterances={utterances} partial={partial} />
           </section>
         </div>

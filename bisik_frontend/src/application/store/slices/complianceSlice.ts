@@ -1,10 +1,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { Obligation, Violation } from '../../../domain/entities/compliance'
+import type { Nudge, Obligation, Violation } from '../../../domain/entities/compliance'
 
 interface ComplianceState {
   obligations: Obligation[]
   violations: Violation[]
-  lastNudge: string | null
+  lastNudge: Nudge | null
 }
 
 const initialState: ComplianceState = { obligations: [], violations: [], lastNudge: null }
@@ -38,7 +38,7 @@ const complianceSlice = createSlice({
     violationsLoaded(state, action: PayloadAction<Violation[]>) {
       state.violations = action.payload
     },
-    nudgeReceived(state, action: PayloadAction<string>) {
+    nudgeReceived(state, action: PayloadAction<Nudge>) {
       state.lastNudge = action.payload
     },
     complianceReset() {

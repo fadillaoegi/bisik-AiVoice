@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -128,6 +129,55 @@ func TestSeedMelewatiAkunTanpaKataSandi(t *testing.T) {
 	})
 	if err != nil || created != 0 {
 		t.Fatalf("akun tanpa kata sandi tidak boleh dibuat: %d, %v", created, err)
+	}
+}
+
+func TestCreateUserMenambahAkunKeTabelYangSudahTerisi(t *testing.T) {
+	users := newUserRepoFake()
+	uc := NewAuthUsecase(users, hasherFake{}, &signerFake{})
+	if _, err := uc.Seed(context.Background(), []SeedAccount{
+		{Username: "petugas", Role: domain.RoleOfficer, Password: "a"},
+	}); err != nil {
+		t.Fatalf("Seed(): %v", err)
+	}
+
+	user, err := uc.CreateUser(context.Background(), SeedAccount{
+		Username: " handoko ", Name: " Handoko ", Role: domain.RoleOfficer, Password: "rahasia-123",
+	})
+	if err != nil {
+		t.Fatalf("CreateUser(): %v", err)
+	}
+	if user.Username != "handoko" || user.Name != "Handoko" || user.Role != domain.RoleOfficer {
+		t.Fatalf("user = %+v, spasi harus dipangkas", user)
+	}
+	// Harus bisa langsung dipakai login lewat hasher yang sama.
+	if _, err := uc.Login(context.Background(), "handoko", "rahasia-123"); err != nil {
+		t.Fatalf("akun baru tidak bisa login: %v", err)
+	}
+}
+
+func TestCreateUserMenolakInputTidakSah(t *testing.T) {
+	users := newUserRepoFake()
+	uc := NewAuthUsecase(users, hasherFake{}, &signerFake{})
+	users.byUsername["handoko"] = &domain.User{Username: "handoko"}
+
+	cases := []struct {
+		name    string
+		account SeedAccount
+		want    error
+	}{
+		{"username dipakai", SeedAccount{Username: "handoko", Name: "H", Role: domain.RoleOfficer, Password: "12345678"}, domain.ErrConflict},
+		{"sandi pendek", SeedAccount{Username: "baru", Name: "B", Role: domain.RoleOfficer, Password: "1234567"}, domain.ErrInvalidInput},
+		{"role asing", SeedAccount{Username: "baru", Name: "B", Role: "nasabah", Password: "12345678"}, domain.ErrInvalidInput},
+		{"nama kosong", SeedAccount{Username: "baru", Name: "  ", Role: domain.RoleOfficer, Password: "12345678"}, domain.ErrInvalidInput},
+	}
+	for _, c := range cases {
+		if _, err := uc.CreateUser(context.Background(), c.account); !errors.Is(err, c.want) {
+			t.Errorf("%s: err = %v, mau %v", c.name, err, c.want)
+		}
+	}
+	if len(users.created) != 0 {
+		t.Fatalf("tidak boleh ada akun tercipta: %d", len(users.created))
 	}
 }
 

@@ -1,5 +1,6 @@
 import type { AuthRepository } from '../../domain/repositories/auth_repository'
 import type { AuthSession, AuthUser, Role } from '../../domain/entities/auth'
+import { AppError } from '../../domain/entities/app_error'
 import { tokenStore } from './token_store'
 
 const API = import.meta.env.VITE_API_URL || window.location.origin
@@ -21,9 +22,7 @@ export class HttpAuthRepository implements AuthRepository {
     if (!res.ok) {
       // Backend sengaja tidak membedakan akun tidak ada dan sandi salah.
       throw new Error(
-        res.status === 401
-          ? 'Nama pengguna atau kata sandi salah'
-          : `Gagal masuk (HTTP ${res.status})`,
+        res.status === 401 ? AppError.invalidCredentials : AppError.loginFailed(res.status),
       )
     }
     const raw = (await res.json()) as { token: string; user: UserDTO }

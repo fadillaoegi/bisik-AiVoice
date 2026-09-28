@@ -1,19 +1,11 @@
 import type { Obligation } from '../../domain/entities/compliance'
+import { useI18n } from '../i18n/useI18n'
+import { obligationLabel } from '../i18n/localize'
 
-/**
- * Kalimat perintah per butir kewajiban.
- *
- * Sengaja TIDAK memakai `Description` dari backend: yang di sana adalah
- * prompt untuk semantic matcher — kalimat orang ketiga yang deskriptif.
- * Petugas yang sedang bicara butuh instruksi langsung dan pendek.
- */
-const hint: Record<string, string> = {
-  IDENTITY: 'Sebutkan nama kamu dan nama lembaga tempatmu bekerja.',
-  RATE: 'Sebutkan suku bunga atau total biaya yang harus dibayar.',
-  TENOR: 'Sebutkan jangka waktu dan besar cicilan per bulan.',
-  PENALTY: 'Jelaskan denda kalau nasabah telat membayar.',
-  RIGHT: 'Beri tahu nasabah berhak menolak atau membatalkan.',
-}
+// Kalimat perintah per butir ada di kamus (`obligations.hint`). Sengaja TIDAK
+// memakai `Description` dari backend: yang di sana adalah prompt untuk
+// semantic matcher — kalimat orang ketiga yang deskriptif. Petugas yang
+// sedang bicara butuh instruksi langsung dan pendek.
 
 /**
  * Satu butir besar + titik progres.
@@ -22,14 +14,15 @@ const hint: Record<string, string> = {
  * hanya kewajiban berikutnya yang tampil besar; sisanya cukup jadi titik.
  */
 export function ObligationFocus({ items }: { items: Obligation[] }) {
+  const { t } = useI18n()
   // Nol butir berarti daftarnya belum termuat, BUKAN semuanya terpenuhi.
   // Membedakan keduanya penting: "Lengkap" pada checklist kosong adalah
   // klaim palsu, dan itu justru kebalikan dari gunanya produk ini.
   if (items.length === 0) {
     return (
       <section className="focus">
-        <p className="focus__eyebrow">Memuat kewajiban</p>
-        <h2 className="focus__title">Menyiapkan…</h2>
+        <p className="focus__eyebrow">{t.focus.loading}</p>
+        <h2 className="focus__title">{t.focus.preparing}</h2>
       </section>
     )
   }
@@ -41,10 +34,10 @@ export function ObligationFocus({ items }: { items: Obligation[] }) {
     <>
       <section className={next ? 'focus' : 'focus focus--done'}>
         <p className="focus__eyebrow">
-          {next ? 'Belum disampaikan' : 'Semua kewajiban terpenuhi'}
+          {next ? t.focus.pending : t.focus.allDone}
         </p>
-        <h2 className="focus__title">{next ? next.label : 'Lengkap'}</h2>
-        {next && <p className="focus__hint">{hint[next.code]}</p>}
+        <h2 className="focus__title">{next ? obligationLabel(t, next) : t.focus.complete}</h2>
+        {next && <p className="focus__hint">{t.obligations.hint[next.code]}</p>}
       </section>
 
       <div className="dots">
@@ -54,7 +47,7 @@ export function ObligationFocus({ items }: { items: Obligation[] }) {
           ))}
         </span>
         <span className="dots__count">
-          {satisfied} dari {items.length}
+          {t.focus.count(satisfied, items.length)}
         </span>
       </div>
     </>

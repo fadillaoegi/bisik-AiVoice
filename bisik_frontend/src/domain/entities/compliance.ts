@@ -18,6 +18,20 @@ export interface Violation {
   detectedAt: string
 }
 
+/**
+ * Satu bisikan ke earpiece petugas.
+ *
+ * `text` adalah kalimat Bahasa Indonesia yang diucapkan — backend mencocokkan
+ * kalimat itu untuk mengenali gemanya sendiri. `kind` beserta `code`/`phrase`
+ * dipakai untuk MENAMPILKAN bisikan dalam bahasa antarmuka lain.
+ */
+export interface Nudge {
+  text: string
+  kind?: 'avoid_phrase' | 'pending_obligation' | 'demo_correction' | 'demo_reminder'
+  code?: string
+  phrase?: string
+}
+
 export interface ComplianceReport {
   session: Session
   obligations: Obligation[]

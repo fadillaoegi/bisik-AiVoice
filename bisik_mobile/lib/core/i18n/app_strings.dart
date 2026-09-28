@@ -39,6 +39,9 @@ abstract class AppStrings {
   String get checking;
   String get signIn;
   String get signOut;
+  String get signOutTitle;
+  String get signOutBody;
+  String get cancel;
   String signedInAs(String name);
 
   // ── Sesi ────────────────────────────────────────────────────────────
@@ -51,6 +54,7 @@ abstract class AppStrings {
   String get obligationDetails;
   String get transcript;
   String get endSession;
+  String get endingSession;
   String get preparingReport;
 
   // ── Pembicara ───────────────────────────────────────────────────────
@@ -62,16 +66,14 @@ abstract class AppStrings {
   // ── Kalibrasi ───────────────────────────────────────────────────────
   String calibrationEyebrow(int? step);
   String get calibrationTitle;
-
-  /// Kosong di Bahasa Indonesia. Di bahasa lain menjelaskan kenapa kalimat
-  /// kalibrasi tetap Bahasa Indonesia: transkripsi seluruh sesi dikunci ke
-  /// bahasa yang pertama terdengar.
-  String get calibrationScriptNote;
   String get officerPromptTrailing;
 
-  // Kalimat kalibrasi SENGAJA sama di semua bahasa antarmuka.
-  String get officerScript => '“Saya petugas yang menjalankan sesi ini.”';
-  String get customerScript => '“Saya nasabah dan siap memulai.”';
+  // Isi kalimat kalibrasi tidak dinilai atau dicocokkan backend — yang
+  // dipelajari hanya suaranya — jadi aman mengikuti bahasa antarmuka.
+  // Bahasa juga dideteksi per ucapan, bukan dikunci per sesi (diuji
+  // 28 Sep 2026).
+  String get officerScript;
+  String get customerScript;
   String get listeningOfficer;
   String get officerRegistered;
   String get customerPromptLead;
@@ -115,6 +117,7 @@ abstract class AppStrings {
   String nudgePending(String label);
 
   // ── Peringatan & error ──────────────────────────────────────────────
+  String get scoringUnavailable;
   String get warningUnknownSpeaker;
   String warningEvidenceSkipped(String? reason);
   String warningAudioDegraded(String? reason);
@@ -149,6 +152,13 @@ class _IdStrings extends AppStrings {
   @override
   String get signOut => 'Keluar';
   @override
+  String get signOutTitle => 'Keluar dari akun?';
+  @override
+  String get signOutBody =>
+      'Anda perlu masuk lagi dengan nama pengguna dan kata sandi untuk melanjutkan.';
+  @override
+  String get cancel => 'Batal';
+  @override
   String signedInAs(String name) => 'Masuk sebagai $name';
 
   @override
@@ -170,6 +180,8 @@ class _IdStrings extends AppStrings {
   @override
   String get endSession => 'Akhiri sesi';
   @override
+  String get endingSession => 'Mengakhiri sesi…';
+  @override
   String get preparingReport => 'Menyiapkan laporan berbukti…';
 
   @override
@@ -186,9 +198,11 @@ class _IdStrings extends AppStrings {
   @override
   String get calibrationTitle => 'Kenali dua suara';
   @override
-  String get calibrationScriptNote => '';
-  @override
   String get officerPromptTrailing => ', ucapkan kalimat ini:';
+  @override
+  String get officerScript => '“Saya petugas yang menjalankan sesi ini.”';
+  @override
+  String get customerScript => '“Saya nasabah dan siap memulai.”';
   @override
   String get listeningOfficer => 'Mendengarkan suara petugas…';
   @override
@@ -283,6 +297,10 @@ class _IdStrings extends AppStrings {
   String nudgePending(String label) => 'Belum disampaikan: $label';
 
   @override
+  String get scoringUnavailable =>
+      'Penilai AI tidak bisa dipakai, jadi kewajiban tidak akan terpenuhi. '
+      'Periksa akses LLM Gateway di akun AssemblyAI.';
+  @override
   String get warningUnknownSpeaker =>
       'Ada ucapan dari suara yang tidak dikenali — tidak dihitung sebagai bukti';
   @override
@@ -345,6 +363,13 @@ class _EnStrings extends AppStrings {
   @override
   String get signOut => 'Sign out';
   @override
+  String get signOutTitle => 'Sign out of your account?';
+  @override
+  String get signOutBody =>
+      'You will need your username and password to sign in again.';
+  @override
+  String get cancel => 'Cancel';
+  @override
   String signedInAs(String name) => 'Signed in as $name';
 
   @override
@@ -366,6 +391,8 @@ class _EnStrings extends AppStrings {
   @override
   String get endSession => 'End session';
   @override
+  String get endingSession => 'Ending session…';
+  @override
   String get preparingReport => 'Preparing the evidence report…';
 
   @override
@@ -382,10 +409,11 @@ class _EnStrings extends AppStrings {
   @override
   String get calibrationTitle => 'Learn the two voices';
   @override
-  String get calibrationScriptNote =>
-      'Say it in Indonesian — the conversation is transcribed as Indonesian.';
-  @override
   String get officerPromptTrailing => ', say this sentence:';
+  @override
+  String get officerScript => '“I am the officer running this session.”';
+  @override
+  String get customerScript => '“I am the customer and I am ready to begin.”';
   @override
   String get listeningOfficer => 'Listening for the officer…';
   @override
@@ -477,6 +505,10 @@ class _EnStrings extends AppStrings {
   @override
   String nudgePending(String label) => 'Not yet disclosed: $label';
 
+  @override
+  String get scoringUnavailable =>
+      'The AI scorer is unavailable, so no obligation can be met. '
+      'Check LLM Gateway access on the AssemblyAI account.';
   @override
   String get warningUnknownSpeaker =>
       'An utterance came from an unrecognised voice — not counted as evidence';

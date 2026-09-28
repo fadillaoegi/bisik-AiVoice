@@ -1,4 +1,4 @@
-.PHONY: help db db-down db-reset migrate dev build test tidy psql auth-secret
+.PHONY: help db db-down db-reset migrate add-user dev build test tidy psql auth-secret
 
 # Muat konfigurasi lokal tanpa menaruh secret di source code atau command line.
 # File .env diabaikan Git.
@@ -18,10 +18,13 @@ db-reset: ## Hapus volume database lalu buat Postgres kosong
 	docker compose down -v && docker compose up -d postgres
 
 psql: ## Masuk ke shell psql
-	docker compose exec postgres psql -U saksi -d saksi
+	docker compose exec postgres psql -U bisik -d bisik
 
 migrate: ## Jalankan migrasi database tanpa menyalakan API
 	go run ./cmd/migrate
+
+add-user: ## Tambah akun: make add-user USERNAME=handoko NAME="Handoko" [ROLE=supervisor]
+	go run ./cmd/adduser -username "$(USERNAME)" -name "$(NAME)" -role "$(or $(ROLE),officer)"
 
 dev: ## Jalankan API di host (butuh `make db` dulu)
 	go run ./cmd/api

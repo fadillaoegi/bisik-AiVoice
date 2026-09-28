@@ -28,8 +28,11 @@ type Config struct {
 	TranscriptModel string
 	DiarizerModel   string // kosong = mode satu stream
 	LLMModel        string
-	StaticDir       string
-	AuthConfigured  bool
+	// LLMProblem berisi alasan penilai semantik tidak bisa dipakai, hasil
+	// uji akses saat startup. Kosong = akses terbukti berhasil.
+	LLMProblem     string
+	StaticDir      string
+	AuthConfigured bool
 }
 
 // Balon percakapan dengan gelombang suara di dalamnya — bentuk yang sama
@@ -120,6 +123,13 @@ func Print(w io.Writer, cfg Config) {
 		auth = "auth aktif"
 	}
 	b.WriteString(fmt.Sprintf("  %s  %s\n", paint(muted, "keamanan"), auth))
+
+	scorer := "akses model terbukti"
+	if cfg.LLMProblem != "" {
+		scorer = paint(amber, "TIDAK BISA DIPAKAI — kewajiban tidak akan pernah terpenuhi") +
+			"\n            " + paint(amber, cfg.LLMProblem)
+	}
+	b.WriteString(fmt.Sprintf("  %s  %s\n", paint(muted, "penilai "), scorer))
 
 	static := paint(muted, "tidak menyajikan frontend")
 	if cfg.StaticDir != "" {

@@ -4,21 +4,22 @@ services:
     container_name: bisik_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: saksi
-      POSTGRES_PASSWORD: saksi
-      POSTGRES_DB: saksi
+      POSTGRES_USER: bisik
+      POSTGRES_PASSWORD: bisik
+      POSTGRES_DB: bisik
     ports:
       - "5432:5432"
     volumes:
-      # Nama fisik volume sengaja tetap memakai nama project lama agar data
-      # PostgreSQL 18 yang sudah ada tidak ditinggalkan setelah rename ke Bisik.
-      # Ini BUKAN volume PG17; format data major version berbeda tidak boleh
-      # dipasang langsung ke server PG18.
+      # Volume baru: kredensial dan nama database ikut berganti ke `bisik`,
+      # dan role/database di dalam volume lama tetap bernama `saksi` — tidak
+      # ada cara memakainya tanpa menyisakan nama lama. Volume lama
+      # (`saksi_backend_saksi_pgdata18`) sengaja TIDAK dihapus, jadi data uji
+      # lama masih bisa diambil kalau suatu saat dibutuhkan.
       # Mulai image 18, image resmi menyimpan cluster pada subdirektori
       # major-version dan meminta volume dipasang di parent directory ini.
       - bisik_pgdata18:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U saksi -d saksi"]
+      test: ["CMD-SHELL", "pg_isready -U bisik -d bisik"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -36,7 +37,7 @@ services:
         condition: service_healthy
     environment:
       PORT: "8080"
-      DATABASE_URL: "postgres://saksi:saksi@postgres:5432/saksi?sslmode=disable"
+      DATABASE_URL: "postgres://bisik:bisik@postgres:5432/bisik?sslmode=disable"
       ASSEMBLYAI_API_KEY: "${ASSEMBLYAI_API_KEY}"
       ALLOWED_ORIGINS: "http://localhost:5173"
     ports:
@@ -44,4 +45,3 @@ services:
 
 volumes:
   bisik_pgdata18:
-    name: saksi_backend_saksi_pgdata18

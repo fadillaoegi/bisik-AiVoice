@@ -6,6 +6,7 @@ var (
 	ErrNotFound      = errors.New("resource tidak ditemukan")
 	ErrSessionEnded  = errors.New("sesi sudah berakhir")
 	ErrInvalidInput  = errors.New("input tidak valid")
+	ErrConflict      = errors.New("data sudah ada")
 	ErrUpstreamAudio = errors.New("upstream audio gagal")
 
 	// ErrUnauthenticated: tidak ada kredensial yang sah sama sekali.

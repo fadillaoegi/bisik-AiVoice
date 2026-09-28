@@ -114,6 +114,20 @@ func main() {
 
 	sessionUC := usecase.NewSessionUsecase(sessionRepo, complianceRepo, stt)
 	complianceUC := usecase.NewComplianceUsecase(complianceRepo, transcriptRepo, matcher, guard, nudger, hub)
+	complianceUC.SetLogger(log)
+
+	// Uji akses penilai sekali saat menyala. Tidak menghentikan server:
+	// transkripsi dan demo tetap berguna tanpa penilai, tetapi kegagalannya
+	// harus terlihat di banner, bukan baru ketahuan di tengah uji lapangan.
+	llmProblem := ""
+	pingCtx, cancelPing := context.WithTimeout(ctx, 10*time.Second)
+	if err := matcher.Ping(pingCtx); err != nil {
+		llmProblem = err.Error()
+		complianceUC.SetScorerProblem(llmProblem)
+		log.Error("LLM Gateway tidak bisa dipakai; kewajiban tidak akan pernah terpenuhi",
+			"model", cfg.LLMModel, "err", err)
+	}
+	cancelPing()
 
 	wsHandler := ws.NewHandler(hub, stt, complianceUC, socketAuth, cfg.AllowedOrigins,
 		time.Duration(cfg.NudgeIntervalS)*time.Second, log)
@@ -130,6 +144,7 @@ func main() {
 		TranscriptModel: cfg.AssemblyAISpeechModel,
 		DiarizerModel:   cfg.AssemblyAIDiarizerModel,
 		LLMModel:        cfg.LLMModel,
+		LLMProblem:      llmProblem,
 		StaticDir:       cfg.StaticDir,
 		AuthConfigured:  cfg.AuthSecret != "",
 	})

@@ -94,6 +94,13 @@ class SessionErrorReceived extends SessionEvent {
   final String? message;
 }
 
+/// Penilai semantik gagal (mis. akun kehilangan akses LLM Gateway). Sesi
+/// tetap berjalan, tetapi tidak ada kewajiban yang bisa terpenuhi.
+class ScoringUnavailable extends SessionEvent {
+  const ScoringUnavailable(this.message);
+  final String message;
+}
+
 class UnknownEvent extends SessionEvent {
   const UnknownEvent();
 }

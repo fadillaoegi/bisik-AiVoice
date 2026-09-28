@@ -4,9 +4,8 @@
 
 Dibangun untuk **AssemblyAI Voice Agent Hackathon 2026** (lablab.ai).
 
-**Bisik** adalah nama produk sekaligus nama ketiga component/module. Nama folder
-repository dan remote GitHub masih memakai `saksi-voiceAI` agar riwayat dan URL
-publik tidak terputus.
+**Bisik** adalah nama produk sekaligus nama repository dan ketiga
+component/module. Repository publik berada di `fadillaoegi/bisik-AiVoice`.
 
 ## Kenapa ini berbeda
 

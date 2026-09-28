@@ -6,10 +6,10 @@ import type { SpeechRepository } from '../../domain/repositories/audio_repositor
  * dan suaranya keluar lewat earpiece perangkat petugas — nasabah tidak dengar.
  */
 export class WebSpeechRepository implements SpeechRepository {
-  speak(text: string): void {
+  speak(text: string, lang = 'id-ID'): void {
     if (!('speechSynthesis' in window)) return
     const u = new SpeechSynthesisUtterance(text)
-    u.lang = 'id-ID'
+    u.lang = lang
     u.rate = 1.15
     window.speechSynthesis.speak(u)
   }

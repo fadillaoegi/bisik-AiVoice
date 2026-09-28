@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -54,5 +55,30 @@ func jsonResponse(status int, body string) *http.Response {
 		StatusCode: status,
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
 		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+}
+
+// Ping harus melaporkan kalimat penyebab dari metadata.errors, bukan
+// "invalid request body" yang tidak menjelaskan apa pun.
+func TestPingMelaporkanPenyebabDariGateway(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"metadata":{"errors":["Your account does not have access to this LLM Gateway model"]},"message":"invalid request body","code":400}`))
+	}))
+	defer srv.Close()
+
+	err := newLLMMatcher("kunci", "claude-sonnet-4-6", srv.URL).Ping(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "does not have access") || !strings.Contains(err.Error(), "400") {
+		t.Fatalf("Ping() = %v, mau menyebut HTTP 400 dan penyebabnya", err)
+	}
+}
+
+func TestPingBerhasilSaatGatewayMenerima(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"ok"}}]}`))
+	}))
+	defer srv.Close()
+	if err := newLLMMatcher("kunci", "m", srv.URL).Ping(context.Background()); err != nil {
+		t.Fatalf("Ping() = %v, mau nil", err)
 	}
 }

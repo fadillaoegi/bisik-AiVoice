@@ -34,6 +34,7 @@ class SessionState {
     this.starting = false,
     this.report,
     this.loadingReport = false,
+    this.ending = false,
     this.error,
     this.warning,
     this.calibration = CalibrationStatus.idle,
@@ -41,6 +42,7 @@ class SessionState {
     this.officerVoice,
     this.duplicateVoice = false,
     this.calibrationError,
+    this.scoringError,
   });
 
   final Session? session;
@@ -61,6 +63,10 @@ class SessionState {
   final ComplianceReport? report;
   final bool loadingReport;
 
+  /// Sesi sedang diakhiri: gateway menunggu AssemblyAI menuntaskan ucapan
+  /// terakhir sebelum skor akhir dihitung — bisa beberapa detik.
+  final bool ending;
+
   /// [Failure], pesan dari gateway, atau error lain. Kalimatnya disusun saat
   /// ditampilkan (`AppStrings.describe`) agar ikut bahasa antarmuka.
   final Object? error;
@@ -79,6 +85,9 @@ class SessionState {
 
   /// Pesan dari gateway; string kosong = gagal tanpa alasan yang disebut.
   final String? calibrationError;
+
+  /// Rincian kegagalan penilai semantik; null = penilai sehat.
+  final String? scoringError;
 
   /// Suara yang benar-benar dikenali, terurut. Label kosong disaring di
   /// gateway, jadi di sini cukup menyaring yang tidak membawa teks.
@@ -132,6 +141,7 @@ class SessionState {
     bool? starting,
     ComplianceReport? report,
     bool? loadingReport,
+    bool? ending,
     Object? error,
     SessionWarning? warning,
     CalibrationStatus? calibration,
@@ -139,6 +149,7 @@ class SessionState {
     String? officerVoice,
     bool? duplicateVoice,
     String? calibrationError,
+    String? scoringError,
     bool clearPartial = false,
     bool clearError = false,
     bool clearWarning = false,
@@ -156,6 +167,7 @@ class SessionState {
     starting: starting ?? this.starting,
     report: report ?? this.report,
     loadingReport: loadingReport ?? this.loadingReport,
+    ending: ending ?? this.ending,
     error: clearError ? null : (error ?? this.error),
     warning: clearWarning ? null : (warning ?? this.warning),
     calibration: calibration ?? this.calibration,
@@ -167,5 +179,6 @@ class SessionState {
     calibrationError: clearCalibrationError
         ? null
         : (calibrationError ?? this.calibrationError),
+    scoringError: scoringError ?? this.scoringError,
   );
 }
