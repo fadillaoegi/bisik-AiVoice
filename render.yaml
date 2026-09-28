@@ -27,6 +27,30 @@ services:
         value: "120000"
       - key: LLM_MODEL
         value: claude-sonnet-4-6
+      # Penilai berurutan: yang pertama dipakai dulu, sisanya cadangan saat
+      # kuota habis atau gagal. Penyedia tanpa kunci dilewati.
+      - key: LLM_PROVIDERS
+        value: groq,gemini,openrouter,mistral,cerebras,assemblyai
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: google/gemma-4-31b-it:free
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: MISTRAL_MODEL
+        value: mistral-small-latest
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: CEREBRAS_MODEL
+        value: gpt-oss-120b
       - key: NUDGE_INTERVAL_SECONDS
         value: "45"
       # Menandatangani token bearer. Backend menolak start kalau kosong —

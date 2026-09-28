@@ -298,8 +298,8 @@ class _IdStrings extends AppStrings {
 
   @override
   String get scoringUnavailable =>
-      'Penilai AI tidak bisa dipakai, jadi kewajiban tidak akan terpenuhi. '
-      'Periksa akses LLM Gateway di akun AssemblyAI.';
+      'Semua penilai AI tidak bisa dipakai, jadi kewajiban tidak akan terpenuhi. '
+      'Periksa kunci API penilai (LLM_PROVIDERS) di server.';
   @override
   String get warningUnknownSpeaker =>
       'Ada ucapan dari suara yang tidak dikenali — tidak dihitung sebagai bukti';
@@ -507,8 +507,8 @@ class _EnStrings extends AppStrings {
 
   @override
   String get scoringUnavailable =>
-      'The AI scorer is unavailable, so no obligation can be met. '
-      'Check LLM Gateway access on the AssemblyAI account.';
+      'Every AI scorer is unavailable, so no obligation can be met. '
+      'Check the scorer API keys (LLM_PROVIDERS) on the server.';
   @override
   String get warningUnknownSpeaker =>
       'An utterance came from an unrecognised voice — not counted as evidence';

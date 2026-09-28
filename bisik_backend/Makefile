@@ -1,4 +1,4 @@
-.PHONY: help db db-down db-reset migrate add-user dev build test tidy psql auth-secret
+.PHONY: help db db-down db-reset migrate scorer-probe add-user dev build test tidy psql auth-secret
 
 # Muat konfigurasi lokal tanpa menaruh secret di source code atau command line.
 # File .env diabaikan Git.
@@ -22,6 +22,9 @@ psql: ## Masuk ke shell psql
 
 migrate: ## Jalankan migrasi database tanpa menyalakan API
 	go run ./cmd/migrate
+
+scorer-probe: ## Uji kualitas tiap penyedia penilai (LLM_PROVIDERS) dengan kalimat yang sudah diketahui jawabannya
+	go run ./cmd/scorerprobe
 
 add-user: ## Tambah akun: make add-user USERNAME=handoko NAME="Handoko" [ROLE=supervisor]
 	go run ./cmd/adduser -username "$(USERNAME)" -name "$(NAME)" -role "$(or $(ROLE),officer)"

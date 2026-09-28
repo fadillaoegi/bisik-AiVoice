@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -87,7 +88,7 @@ func main() {
 		log.Warn("mode satu stream: diarization mengikuti model transkrip",
 			"model", cfg.AssemblyAISpeechModel)
 	}
-	matcher := assemblyai.NewLLMMatcher(cfg.AssemblyAIKey, cfg.LLMModel)
+	matcher := newScorer(cfg, log)
 	guard := assemblyai.NewPhraseGuard()
 
 	signer := auth.NewSigner(cfg.AuthSecret, time.Duration(cfg.AuthTTLH)*time.Hour)
@@ -116,18 +117,28 @@ func main() {
 	complianceUC := usecase.NewComplianceUsecase(complianceRepo, transcriptRepo, matcher, guard, nudger, hub)
 	complianceUC.SetLogger(log)
 
-	// Uji akses penilai sekali saat menyala. Tidak menghentikan server:
+	// Uji akses tiap penyedia sekali saat menyala. Tidak menghentikan server:
 	// transkripsi dan demo tetap berguna tanpa penilai, tetapi kegagalannya
 	// harus terlihat di banner, bukan baru ketahuan di tengah uji lapangan.
-	llmProblem := ""
-	pingCtx, cancelPing := context.WithTimeout(ctx, 10*time.Second)
-	if err := matcher.Ping(pingCtx); err != nil {
-		llmProblem = err.Error()
-		complianceUC.SetScorerProblem(llmProblem)
-		log.Error("LLM Gateway tidak bisa dipakai; kewajiban tidak akan pernah terpenuhi",
-			"model", cfg.LLMModel, "err", err)
-	}
+	pingCtx, cancelPing := context.WithTimeout(ctx, 15*time.Second)
+	scorers := matcher.PingAll(pingCtx)
 	cancelPing()
+	ready := 0
+	for _, s := range scorers {
+		if s.Problem == "" {
+			ready++
+			continue
+		}
+		log.Error("penyedia penilai tidak bisa dipakai", "penyedia", s.Name, "model", s.Model, "err", s.Problem)
+	}
+	if ready == 0 {
+		problem := "tidak ada penyedia LLM yang dikonfigurasi (LLM_PROVIDERS)"
+		if len(scorers) > 0 {
+			problem = "semua penyedia penilai gagal diuji saat startup"
+		}
+		complianceUC.SetScorerProblem(problem)
+		log.Error("penilai semantik tidak bisa dipakai; kewajiban tidak akan pernah terpenuhi", "err", problem)
+	}
 
 	wsHandler := ws.NewHandler(hub, stt, complianceUC, socketAuth, cfg.AllowedOrigins,
 		time.Duration(cfg.NudgeIntervalS)*time.Second, log)
@@ -143,8 +154,7 @@ func main() {
 		Port:            cfg.Port,
 		TranscriptModel: cfg.AssemblyAISpeechModel,
 		DiarizerModel:   cfg.AssemblyAIDiarizerModel,
-		LLMModel:        cfg.LLMModel,
-		LLMProblem:      llmProblem,
+		Scorers:         bannerScorers(scorers),
 		StaticDir:       cfg.StaticDir,
 		AuthConfigured:  cfg.AuthSecret != "",
 	})
@@ -168,4 +178,23 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(shutdownCtx)
+}
+
+// newScorer menyusun penilai semantik dari LLM_PROVIDERS, urut prioritas.
+func newScorer(cfg config.Config, log *slog.Logger) *assemblyai.FailoverMatcher {
+	providers, warnings := assemblyai.BuildProviders(assemblyai.ProviderSpec{
+		Order: cfg.LLMProviders, Keys: cfg.LLMKeys(), Models: cfg.LLMModels(),
+	})
+	for _, w := range warnings {
+		log.Warn(w)
+	}
+	return assemblyai.NewFailoverMatcher(providers, log)
+}
+
+func bannerScorers(in []assemblyai.ProviderStatus) []banner.Scorer {
+	out := make([]banner.Scorer, len(in))
+	for i, s := range in {
+		out[i] = banner.Scorer{Name: s.Name, Model: s.Model, Problem: s.Problem}
+	}
+	return out
 }

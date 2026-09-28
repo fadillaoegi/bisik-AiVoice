@@ -24,7 +24,7 @@ func TestBannerMenyebutSemuaModelDanModenya(t *testing.T) {
 		Port:            "8080",
 		TranscriptModel: "whisper-rt",
 		DiarizerModel:   "universal-streaming-multilingual",
-		LLMModel:        "claude-sonnet-4-6",
+		Scorers:         []Scorer{{Name: "assemblyai", Model: "claude-sonnet-4-6"}},
 		AuthConfigured:  true,
 	})
 	out := buf.String()
@@ -71,10 +71,32 @@ func TestTanpaWarnaSaatBukanTerminal(t *testing.T) {
 // semuanya tampak sehat. Banner harus menyebutnya terang-terangan.
 func TestBannerMemperingatkanPenilaiTidakBisaDipakai(t *testing.T) {
 	var buf bytes.Buffer
-	Print(&buf, Config{Port: "8080", TranscriptModel: "whisper-rt", LLMModel: "claude-sonnet-4-6",
-		LLMProblem: "HTTP 400: Your account does not have access to this LLM Gateway model"})
+	Print(&buf, Config{Port: "8080", TranscriptModel: "whisper-rt", Scorers: []Scorer{{
+		Name: "assemblyai", Model: "claude-sonnet-4-6",
+		Problem: "assemblyai HTTP 400: Your account does not have access to this LLM Gateway model",
+	}}})
 	out := buf.String()
 	if !strings.Contains(out, "TIDAK BISA DIPAKAI") || !strings.Contains(out, "does not have access") {
 		t.Fatalf("masalah penilai tidak disebut:\n%s", out)
+	}
+}
+
+// Sebagian penyedia gagal: banner harus menyebut berapa yang siap, urutan
+// cadangannya, dan penyebab yang gagal — tanpa menyatakan penilai mati.
+func TestBannerMenyebutPenyediaCadangan(t *testing.T) {
+	var buf bytes.Buffer
+	Print(&buf, Config{Port: "8080", TranscriptModel: "whisper-rt", Scorers: []Scorer{
+		{Name: "gemini", Model: "gemini-2.5-flash-lite"},
+		{Name: "groq", Model: "openai/gpt-oss-120b"},
+		{Name: "assemblyai", Model: "claude-sonnet-4-6", Problem: "assemblyai HTTP 400: no access"},
+	}})
+	out := buf.String()
+	for _, want := range []string{"2 dari 3 siap", "gemini → groq → assemblyai", "✗ assemblyai: assemblyai HTTP 400", "Google", "OpenAI"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("banner tidak menyebut %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "TIDAK BISA DIPAKAI") {
+		t.Fatalf("banner menyatakan penilai mati padahal dua penyedia siap:\n%s", out)
 	}
 }

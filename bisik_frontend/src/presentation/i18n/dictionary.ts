@@ -76,7 +76,7 @@ const id = {
     },
     audioHeld: 'penilaian ditahan sampai audio membaik',
     scoringUnavailable:
-      'Penilai AI tidak bisa dipakai, jadi kewajiban tidak akan terpenuhi. Periksa akses LLM Gateway di akun AssemblyAI.',
+      'Semua penilai AI tidak bisa dipakai, jadi kewajiban tidak akan terpenuhi. Periksa kunci API penilai (LLM_PROVIDERS) di server.',
     excluded: (count: number) =>
       `${count} ucapan tidak dihitung sebagai bukti — suara tidak dikenali atau audio tidak layak. Ulangi bagian itu.`,
     obligationDetails: 'Rincian kewajiban',
@@ -267,7 +267,7 @@ const en: Dictionary = {
     },
     audioHeld: 'scoring paused until the audio improves',
     scoringUnavailable:
-      'The AI scorer is unavailable, so no obligation can be met. Check LLM Gateway access on the AssemblyAI account.',
+      'Every AI scorer is unavailable, so no obligation can be met. Check the scorer API keys (LLM_PROVIDERS) on the server.',
     excluded: (count) =>
       `${count} ${count === 1 ? 'utterance was' : 'utterances were'} not counted as evidence — unrecognised voice or unusable audio. Repeat that part.`,
     obligationDetails: 'Obligation details',

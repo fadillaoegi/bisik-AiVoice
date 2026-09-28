@@ -27,12 +27,18 @@ type Config struct {
 	Port            string
 	TranscriptModel string
 	DiarizerModel   string // kosong = mode satu stream
-	LLMModel        string
-	// LLMProblem berisi alasan penilai semantik tidak bisa dipakai, hasil
-	// uji akses saat startup. Kosong = akses terbukti berhasil.
-	LLMProblem     string
+	// Scorers adalah penyedia penilai semantik, urut prioritas, beserta
+	// hasil uji aksesnya saat startup.
+	Scorers        []Scorer
 	StaticDir      string
 	AuthConfigured bool
+}
+
+// Scorer adalah satu penyedia penilai semantik.
+type Scorer struct {
+	Name    string // nama di LLM_PROVIDERS, mis. "gemini" atau "gemini#2"
+	Model   string
+	Problem string // kosong = uji akses berhasil
 }
 
 // Balon percakapan dengan gelombang suara di dalamnya — bentuk yang sama
@@ -53,6 +59,16 @@ func providerMark(model string) (string, string) {
 	switch {
 	case strings.Contains(model, "claude"):
 		return "✳", "Anthropic"
+	case strings.Contains(model, "gemini"), strings.Contains(model, "gemma"):
+		return "◆", "Google"
+	case strings.Contains(model, "gpt"):
+		return "◎", "OpenAI"
+	case strings.Contains(model, "qwen"):
+		return "◇", "Qwen"
+	case strings.Contains(model, "mistral"):
+		return "✦", "Mistral"
+	case strings.Contains(model, "nemotron"):
+		return "▣", "NVIDIA"
 	case model == "":
 		return " ", ""
 	default:
@@ -84,7 +100,13 @@ func Print(w io.Writer, cfg Config) {
 	if cfg.DiarizerModel != "" {
 		rows = append(rows, modelLine(paint, cfg.DiarizerModel, "label pembicara"))
 	}
-	rows = append(rows, modelLine(paint, cfg.LLMModel, "semantic match"))
+	for _, s := range cfg.Scorers {
+		role := "penilai via " + s.Name
+		if s.Problem != "" {
+			role += " ✗"
+		}
+		rows = append(rows, modelLine(paint, s.Model, role))
+	}
 
 	// Lebar dihitung per RUNE, bukan byte: karakter kotak multi-byte, dan
 	// %-17s di Go menghitung byte sehingga kolomnya berantakan.
@@ -124,12 +146,7 @@ func Print(w io.Writer, cfg Config) {
 	}
 	b.WriteString(fmt.Sprintf("  %s  %s\n", paint(muted, "keamanan"), auth))
 
-	scorer := "akses model terbukti"
-	if cfg.LLMProblem != "" {
-		scorer = paint(amber, "TIDAK BISA DIPAKAI — kewajiban tidak akan pernah terpenuhi") +
-			"\n            " + paint(amber, cfg.LLMProblem)
-	}
-	b.WriteString(fmt.Sprintf("  %s  %s\n", paint(muted, "penilai "), scorer))
+	b.WriteString(fmt.Sprintf("  %s  %s\n", paint(muted, "penilai "), scorerSummary(paint, cfg.Scorers)))
 
 	static := paint(muted, "tidak menyajikan frontend")
 	if cfg.StaticDir != "" {
@@ -162,4 +179,38 @@ func isTerminal(w io.Writer) bool {
 		return false
 	}
 	return info.Mode()&os.ModeCharDevice != 0
+}
+
+// scorerSummary meringkas kesiapan penilai: berapa yang siap, urutan
+// cadangannya, dan penyebab tiap penyedia yang gagal.
+func scorerSummary(paint func(string, string) string, scorers []Scorer) string {
+	if len(scorers) == 0 {
+		return paint(amber, "TIDAK ADA PENYEDIA — isi LLM_PROVIDERS dan kunci API-nya")
+	}
+	ready := 0
+	names := make([]string, len(scorers))
+	var problems []string
+	for i, s := range scorers {
+		names[i] = s.Name
+		if s.Problem == "" {
+			ready++
+		} else {
+			problems = append(problems, s.Name+": "+s.Problem)
+		}
+	}
+	order := strings.Join(names, " → ")
+
+	var head string
+	switch {
+	case ready == 0:
+		head = paint(amber, "TIDAK BISA DIPAKAI — kewajiban tidak akan pernah terpenuhi")
+	case ready == len(scorers):
+		head = fmt.Sprintf("%d penyedia siap · urutan %s", ready, order)
+	default:
+		head = paint(amber, fmt.Sprintf("%d dari %d siap", ready, len(scorers))) + " · urutan " + order
+	}
+	for _, p := range problems {
+		head += "\n            " + paint(amber, "✗ "+p)
+	}
+	return head
 }
