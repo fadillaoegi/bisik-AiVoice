@@ -1,5 +1,6 @@
 import '../../domain/entities/compliance.dart';
 import '../../domain/entities/session.dart';
+import '../../domain/entities/session_event.dart';
 
 /// Contoh suara saat kalibrasi, disimpan per ucapan.
 ///
@@ -47,7 +48,7 @@ class SessionState {
   final List<Utterance> utterances;
   final List<Violation> violations;
   final String? partial;
-  final String? lastNudge;
+  final Nudge? lastNudge;
   final bool connected;
   final bool recording;
 
@@ -60,10 +61,12 @@ class SessionState {
   final ComplianceReport? report;
   final bool loadingReport;
 
-  final String? error;
+  /// [Failure], pesan dari gateway, atau error lain. Kalimatnya disusun saat
+  /// ditampilkan (`AppStrings.describe`) agar ikut bahasa antarmuka.
+  final Object? error;
 
   /// Peringatan non-fatal: bagian percakapan yang tidak dihitung sebagai bukti.
-  final String? warning;
+  final SessionWarning? warning;
 
   final CalibrationStatus calibration;
   final List<CalibrationSample> calibrationSamples;
@@ -74,6 +77,7 @@ class SessionState {
   /// Suara yang sama terdengar lagi saat menunggu orang kedua.
   final bool duplicateVoice;
 
+  /// Pesan dari gateway; string kosong = gagal tanpa alasan yang disebut.
   final String? calibrationError;
 
   /// Suara yang benar-benar dikenali, terurut. Label kosong disaring di
@@ -111,7 +115,8 @@ class SessionState {
     final done = obligations
         .where((o) => o.status == ObligationStatus.satisfied)
         .length;
-    final raw = (done / obligations.length * 100).round() - violations.length * 10;
+    final raw =
+        (done / obligations.length * 100).round() - violations.length * 10;
     return raw < 0 ? 0 : raw;
   }
 
@@ -121,14 +126,14 @@ class SessionState {
     List<Utterance>? utterances,
     List<Violation>? violations,
     String? partial,
-    String? lastNudge,
+    Nudge? lastNudge,
     bool? connected,
     bool? recording,
     bool? starting,
     ComplianceReport? report,
     bool? loadingReport,
-    String? error,
-    String? warning,
+    Object? error,
+    SessionWarning? warning,
     CalibrationStatus? calibration,
     List<CalibrationSample>? calibrationSamples,
     String? officerVoice,
@@ -139,27 +144,28 @@ class SessionState {
     bool clearWarning = false,
     bool clearCalibrationError = false,
     bool clearOfficerVoice = false,
-  }) =>
-      SessionState(
-        session: session ?? this.session,
-        obligations: obligations ?? this.obligations,
-        utterances: utterances ?? this.utterances,
-        violations: violations ?? this.violations,
-        partial: clearPartial ? null : (partial ?? this.partial),
-        lastNudge: lastNudge ?? this.lastNudge,
-        connected: connected ?? this.connected,
-        recording: recording ?? this.recording,
-        starting: starting ?? this.starting,
-        report: report ?? this.report,
-        loadingReport: loadingReport ?? this.loadingReport,
-        error: clearError ? null : (error ?? this.error),
-        warning: clearWarning ? null : (warning ?? this.warning),
-        calibration: calibration ?? this.calibration,
-        calibrationSamples: calibrationSamples ?? this.calibrationSamples,
-        officerVoice: clearOfficerVoice ? null : (officerVoice ?? this.officerVoice),
-        duplicateVoice: duplicateVoice ?? this.duplicateVoice,
-        calibrationError: clearCalibrationError
-            ? null
-            : (calibrationError ?? this.calibrationError),
-      );
+  }) => SessionState(
+    session: session ?? this.session,
+    obligations: obligations ?? this.obligations,
+    utterances: utterances ?? this.utterances,
+    violations: violations ?? this.violations,
+    partial: clearPartial ? null : (partial ?? this.partial),
+    lastNudge: lastNudge ?? this.lastNudge,
+    connected: connected ?? this.connected,
+    recording: recording ?? this.recording,
+    starting: starting ?? this.starting,
+    report: report ?? this.report,
+    loadingReport: loadingReport ?? this.loadingReport,
+    error: clearError ? null : (error ?? this.error),
+    warning: clearWarning ? null : (warning ?? this.warning),
+    calibration: calibration ?? this.calibration,
+    calibrationSamples: calibrationSamples ?? this.calibrationSamples,
+    officerVoice: clearOfficerVoice
+        ? null
+        : (officerVoice ?? this.officerVoice),
+    duplicateVoice: duplicateVoice ?? this.duplicateVoice,
+    calibrationError: clearCalibrationError
+        ? null
+        : (calibrationError ?? this.calibrationError),
+  );
 }

@@ -1,24 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/i18n/app_strings.dart';
+import 'core/i18n/language.dart';
 import 'core/theme/bisik_theme.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/providers/auth_providers.dart';
 import 'features/session/presentation/pages/officer_page.dart';
 
-void main() {
-  runApp(const ProviderScope(child: BisikApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Pilihan bahasa dibaca sebelum frame pertama. Kalau penyimpanan perangkat
+  // gagal dibuka, jangan gagalkan aplikasi — cukup pakai bahasa bawaan.
+  SharedPreferences? prefs;
+  try {
+    prefs = await SharedPreferences.getInstance();
+  } catch (_) {
+    prefs = null;
+  }
+
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const BisikApp(),
+    ),
+  );
 }
 
-class BisikApp extends StatelessWidget {
+class BisikApp extends ConsumerWidget {
   const BisikApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(ref.watch(languageProvider));
     return MaterialApp(
       title: 'Bisik',
       debugShowCheckedModeBanner: false,
       theme: bisikTheme(),
+      builder: (context, child) =>
+          StringsScope(strings: strings, child: child ?? const SizedBox()),
       home: const _Gate(),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/i18n/language.dart';
+import '../../../../core/i18n/language_switch.dart';
 import '../../../../core/theme/bisik_theme.dart';
 import '../../../../core/theme/bisik_wave.dart';
 import '../providers/auth_providers.dart';
@@ -27,6 +29,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
     final controller = ref.read(authControllerProvider.notifier);
+    final s = context.s;
 
     return Scaffold(
       body: SafeArea(
@@ -36,6 +39,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              const Align(
+                alignment: Alignment.centerRight,
+                child: LanguageSwitch(),
+              ),
+              const SizedBox(height: 12),
               const Text(
                 'Bisik',
                 style: TextStyle(
@@ -45,15 +53,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Masuk sebagai petugas. Sesi dan laporannya tercatat atas '
-                'nama akun ini.',
-                style: TextStyle(color: BisikColors.muted, fontSize: 14),
+              Text(
+                s.loginHint,
+                style: const TextStyle(color: BisikColors.muted, fontSize: 14),
               ),
               const SizedBox(height: 28),
 
-              const Text('Nama pengguna',
-                  style: TextStyle(color: BisikColors.muted)),
+              Text(
+                s.username,
+                style: const TextStyle(color: BisikColors.muted),
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: _username,
@@ -63,8 +72,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
               const SizedBox(height: 16),
 
-              const Text('Kata sandi',
-                  style: TextStyle(color: BisikColors.muted)),
+              Text(
+                s.password,
+                style: const TextStyle(color: BisikColors.muted),
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: _password,
@@ -83,15 +94,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: auth.busy
-                      ? const Row(
+                      ? Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            BisikWave(height: 18, color: BisikColors.accentInk),
-                            SizedBox(width: 12),
-                            Text('Memeriksa…'),
+                            const BisikWave(
+                              height: 18,
+                              color: BisikColors.accentInk,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(s.checking),
                           ],
                         )
-                      : const Text('Masuk'),
+                      : Text(s.signIn),
                 ),
               ),
 
@@ -105,7 +119,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    auth.error!,
+                    s.describe(auth.error!),
                     style: const TextStyle(color: BisikColors.bad),
                   ),
                 ),

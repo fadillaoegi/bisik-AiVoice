@@ -10,7 +10,7 @@ class AudioDataSource {
 
   Future<Stream<List<int>>> stream() async {
     if (!await _recorder.hasPermission()) {
-      throw const PermissionFailure('Izin mikrofon ditolak');
+      throw const PermissionFailure(FailureKind.micPermissionDenied);
     }
     try {
       return await _recorder.startStream(
@@ -23,7 +23,7 @@ class AudioDataSource {
         ),
       );
     } catch (e) {
-      throw AudioFailure('Gagal membuka mikrofon: $e');
+      throw AudioFailure(FailureKind.micUnavailable, detail: '$e');
     }
   }
 

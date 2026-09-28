@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../core/network/network_failure.dart';
 import '../domain/entities/auth_user.dart';
 
 class AuthRemoteDataSource {
@@ -30,17 +31,12 @@ class AuthRemoteDataSource {
       // Backend sengaja tidak membedakan akun tidak ada dan sandi salah,
       // supaya endpoint ini tidak bisa dipakai memetakan akun yang valid.
       if (e.response?.statusCode == 401) {
-        throw const NetworkFailure('Nama pengguna atau kata sandi salah');
-      }
-      if (e.type == DioExceptionType.connectionError ||
-          e.type == DioExceptionType.connectionTimeout) {
-        throw NetworkFailure(
-          'Gateway ${_dio.options.baseUrl} tidak bisa dihubungi. Pastikan '
-          'backend berjalan; di perangkat fisik jalankan ulang dengan '
-          '--dart-define=API_URL=http://<IP-LAN>:8080',
+        throw const NetworkFailure(
+          FailureKind.invalidCredentials,
+          action: FailureAction.login,
         );
       }
-      throw NetworkFailure('Gagal masuk: ${e.message ?? e.type.name}');
+      throw networkFailure(FailureAction.login, e, _dio.options.baseUrl);
     }
   }
 }

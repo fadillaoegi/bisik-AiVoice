@@ -1,6 +1,23 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+/// Alasan baku yang dikirim ke gateway — kembaran `AUDIO_REASONS` di
+/// `bisik_frontend/src/domain/repositories/audio_repository.ts`.
+///
+/// Kalimatnya tetap Bahasa Indonesia apa pun bahasa antarmukanya: gateway
+/// menyiarkannya ulang apa adanya dan mencatatnya di log. Aplikasi
+/// menerjemahkannya saat menampilkan (`AppStrings.audioReason`).
+abstract final class AudioReasons {
+  static const tooLoud = 'Suara terlalu keras dan pecah';
+  static const tooQuiet = 'Suara terlalu pelan dari mikrofon';
+  static const noisy =
+      'Kebisingan latar terlalu tinggi — matikan musik atau pindah ke tempat lebih tenang';
+
+  /// Dikirim backend lewat `evidence_skipped`, bukan hasil pengukuran klien.
+  static const echo =
+      'terdengar seperti gema bisikan aplikasi — pakai earphone';
+}
+
 /// Pemantau kualitas audio — kembaran `verdictFor` di
 /// `bisik_frontend/src/infrastructure/audio/worklet_audio_repository.ts`.
 ///
@@ -70,10 +87,10 @@ class AudioQualityMonitor {
     required double clippedRatio,
   }) {
     if (peak < _silencePeak) return '';
-    if (clippedRatio > _clipRatio) return 'Suara terlalu keras dan pecah';
-    if (rms < _quietRms) return 'Suara terlalu pelan dari mikrofon';
+    if (clippedRatio > _clipRatio) return AudioReasons.tooLoud;
+    if (rms < _quietRms) return AudioReasons.tooQuiet;
     if (rms > _noisyRms && peak / rms < _noisyCrest) {
-      return 'Kebisingan latar terlalu tinggi — matikan musik atau pindah ke tempat lebih tenang';
+      return AudioReasons.noisy;
     }
     return '';
   }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/audio/audio_quality.dart';
+import '../../../../core/error/failure.dart';
 import '../../domain/entities/compliance.dart';
 import '../../domain/entities/session_event.dart';
 import 'di_providers.dart';
@@ -21,11 +22,12 @@ class SessionController extends Notifier<SessionState> {
 
   Future<void> loadObligations() async {
     try {
-      final obligations =
-          await ref.read(sessionRepositoryProvider).obligations();
+      final obligations = await ref
+          .read(sessionRepositoryProvider)
+          .obligations();
       state = state.copyWith(obligations: obligations);
     } catch (e) {
-      state = state.copyWith(error: '$e');
+      state = state.copyWith(error: e);
     }
   }
 
@@ -37,7 +39,7 @@ class SessionController extends Notifier<SessionState> {
       state = state.copyWith(session: session, clearError: true);
       await _listen(session.id);
     } catch (e) {
-      state = state.copyWith(error: '$e');
+      state = state.copyWith(error: e);
     } finally {
       state = state.copyWith(starting: false);
     }
@@ -62,7 +64,7 @@ class SessionController extends Notifier<SessionState> {
       final report = await ref.read(getReportProvider)(id);
       state = state.copyWith(report: report, loadingReport: false);
     } catch (e) {
-      state = state.copyWith(error: '$e', loadingReport: false);
+      state = state.copyWith(error: e, loadingReport: false);
     }
   }
 
@@ -100,9 +102,11 @@ class SessionController extends Notifier<SessionState> {
     final usecase = ref.read(streamSessionProvider);
     final repo = ref.read(sessionRepositoryProvider);
 
-    _events = usecase.events(sessionId).listen(
+    _events = usecase
+        .events(sessionId)
+        .listen(
           _onEvent,
-          onError: (Object e) => state = state.copyWith(error: '$e'),
+          onError: (Object e) => state = state.copyWith(error: e),
         );
     state = state.copyWith(connected: true);
 
@@ -121,7 +125,7 @@ class SessionController extends Notifier<SessionState> {
       });
       state = state.copyWith(recording: true);
     } catch (e) {
-      state = state.copyWith(error: '$e', recording: false);
+      state = state.copyWith(error: e, recording: false);
     }
   }
 
@@ -137,10 +141,10 @@ class SessionController extends Notifier<SessionState> {
       // Langkah 1 selesai saat suara PERTAMA dikenali; sesudah itu, suara
       // yang sama berarti orang kedua belum bicara.
       case CalibrationUtterance(
-          :final utteranceId,
-          :final sourceSpeaker,
-          :final text
-        ):
+        :final utteranceId,
+        :final sourceSpeaker,
+        :final text,
+      ):
         final samples = [...state.calibrationSamples];
         final index = samples.indexWhere((s) => s.id == utteranceId);
         final merged = CalibrationSample(
@@ -160,9 +164,9 @@ class SessionController extends Notifier<SessionState> {
         final officer = state.officerVoice;
         state = state.copyWith(
           calibrationSamples: samples,
-          officerVoice: officer ?? (sourceSpeaker.isNotEmpty ? sourceSpeaker : null),
-          duplicateVoice:
-              officer != null && sourceSpeaker == officer,
+          officerVoice:
+              officer ?? (sourceSpeaker.isNotEmpty ? sourceSpeaker : null),
+          duplicateVoice: officer != null && sourceSpeaker == officer,
         );
 
       case SpeakerRolesConfirmed():
@@ -172,7 +176,7 @@ class SessionController extends Notifier<SessionState> {
         );
 
       case CalibrationError(:final message):
-        state = state.copyWith(calibrationError: message);
+        state = state.copyWith(calibrationError: message ?? '');
 
       case PartialReceived(:final text):
         state = state.copyWith(partial: text);
@@ -195,7 +199,11 @@ class SessionController extends Notifier<SessionState> {
           ],
         );
 
-      case ObligationSatisfied(:final code, :final confidence, :final evidenceId):
+      case ObligationSatisfied(
+        :final code,
+        :final confidence,
+        :final evidenceId,
+      ):
         state = state.copyWith(
           obligations: [
             for (final o in state.obligations)
@@ -223,18 +231,24 @@ class SessionController extends Notifier<SessionState> {
           ],
         );
 
-      case NudgeReceived(:final text):
-        state = state.copyWith(lastNudge: text);
-        unawaited(ref.read(speechRepositoryProvider).whisper(text));
+      // Yang TAMPIL mengikuti bahasa antarmuka; yang DIUCAPKAN selalu
+      // kalimat Bahasa Indonesia dari gateway, karena kalimat itulah yang
+      // dicocokkan echo guard untuk mengenali gema bisikan sendiri.
+      case NudgeReceived(:final nudge):
+        state = state.copyWith(lastNudge: nudge);
+        unawaited(ref.read(speechRepositoryProvider).whisper(nudge.text));
 
-      // Pesan kosong = kondisi sudah pulih, bersihkan peringatannya.
-      case SessionWarningReceived(:final message):
-        state = state.copyWith(warning: message, clearWarning: message.isEmpty);
+      // null = kondisi sudah pulih, bersihkan peringatannya.
+      case SessionWarningReceived(:final warning):
+        state = state.copyWith(warning: warning, clearWarning: warning == null);
 
       // Jalur audio mati: hentikan indikator merekam supaya petugas tidak
       // mengira sesi masih disimak.
       case SessionErrorReceived(:final message):
-        state = state.copyWith(error: message, recording: false);
+        state = state.copyWith(
+          error: message ?? const AudioFailure(FailureKind.audioPathLost),
+          recording: false,
+        );
 
       case UnknownEvent():
         break;

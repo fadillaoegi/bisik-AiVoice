@@ -1,3 +1,4 @@
+import 'compliance.dart';
 import 'session.dart';
 
 /// Event realtime dari gateway Go.
@@ -37,8 +38,8 @@ class ViolationDetected extends SessionEvent {
 }
 
 class NudgeReceived extends SessionEvent {
-  const NudgeReceived(this.text);
-  final String text;
+  const NudgeReceived(this.nudge);
+  final Nudge nudge;
 }
 
 /// Kalibrasi dimulai: gateway menahan penilaian sampai dua suara dikenali.
@@ -60,23 +61,37 @@ class SpeakerRolesConfirmed extends SessionEvent {
   const SpeakerRolesConfirmed();
 }
 
+/// [message] dari gateway; null kalau gateway tidak menyebut alasannya.
 class CalibrationError extends SessionEvent {
   const CalibrationError(this.message);
-  final String message;
+  final String? message;
 }
 
-/// Bagian percakapan sengaja tidak dihitung sebagai bukti kepatuhan:
-/// pembicara tidak dikenal, atau audio tidak layak. Flutter belum punya
-/// panel khusus, jadi ketiganya masuk ke satu slot peringatan.
+enum SessionWarningKind { unknownSpeaker, evidenceSkipped, audioDegraded }
+
+/// Bagian percakapan yang sengaja tidak dihitung sebagai bukti kepatuhan.
+///
+/// Disimpan sebagai jenis + alasan mentah, bukan kalimat jadi, supaya
+/// ditampilkan dalam bahasa antarmuka. [reason] berasal dari gateway dan
+/// selalu Bahasa Indonesia.
+class SessionWarning {
+  const SessionWarning(this.kind, [this.reason]);
+  final SessionWarningKind kind;
+  final String? reason;
+}
+
+/// Flutter belum punya panel khusus, jadi ketiga jenis peringatan masuk ke
+/// satu slot. [warning] null = kondisi sudah pulih.
 class SessionWarningReceived extends SessionEvent {
-  const SessionWarningReceived(this.message);
-  final String message;
+  const SessionWarningReceived(this.warning);
+  final SessionWarning? warning;
 }
 
 /// Jalur audio upstream berhenti sebelum petugas mengakhiri sesi.
+/// [message] dari gateway; null kalau gateway tidak menyebut alasannya.
 class SessionErrorReceived extends SessionEvent {
   const SessionErrorReceived(this.message);
-  final String message;
+  final String? message;
 }
 
 class UnknownEvent extends SessionEvent {

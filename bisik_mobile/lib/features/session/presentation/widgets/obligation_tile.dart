@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/language.dart';
 import '../../../../core/theme/bisik_theme.dart';
 import '../../domain/entities/compliance.dart';
+import '../session_strings.dart';
 
 class ObligationTile extends StatelessWidget {
   const ObligationTile({super.key, required this.obligation});
@@ -31,7 +33,7 @@ class ObligationTile extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              obligation.label,
+              context.s.obligation(obligation),
               style: TextStyle(color: color, fontSize: 15),
             ),
           ),

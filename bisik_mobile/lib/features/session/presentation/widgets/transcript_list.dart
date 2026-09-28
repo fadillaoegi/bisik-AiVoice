@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/language.dart';
 import '../../../../core/theme/bisik_theme.dart';
 import '../../domain/entities/session.dart';
+import '../session_strings.dart';
 
 class TranscriptList extends StatelessWidget {
   const TranscriptList({super.key, required this.utterances, this.partial});
 
   final List<Utterance> utterances;
   final String? partial;
-
-  static const _labels = {
-    Speaker.officer: 'Petugas',
-    Speaker.customer: 'Nasabah',
-    Speaker.unknown: '—',
-  };
 
   static const _colors = {
     Speaker.officer: BisikColors.officer,
@@ -23,6 +19,7 @@ class TranscriptList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.s;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -57,7 +54,7 @@ class TranscriptList extends StatelessWidget {
                 style: const TextStyle(fontSize: 15, color: BisikColors.text),
                 children: [
                   TextSpan(
-                    text: '${_labels[u.speaker]}  ',
+                    text: '${s.speaker(u.speaker)}  ',
                     style: TextStyle(
                       color: _colors[u.speaker],
                       fontWeight: FontWeight.w600,
@@ -65,9 +62,12 @@ class TranscriptList extends StatelessWidget {
                   ),
                   TextSpan(text: u.text),
                   if (u.revised)
-                    const TextSpan(
-                      text: '  (label direvisi)',
-                      style: TextStyle(color: BisikColors.warn, fontSize: 11),
+                    TextSpan(
+                      text: '  ${s.labelRevised}',
+                      style: const TextStyle(
+                        color: BisikColors.warn,
+                        fontSize: 11,
+                      ),
                     ),
                 ],
               ),

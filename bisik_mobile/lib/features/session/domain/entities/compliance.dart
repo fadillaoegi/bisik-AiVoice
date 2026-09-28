@@ -2,6 +2,27 @@ import 'session.dart';
 
 enum ObligationStatus { pending, satisfied, violated }
 
+enum NudgeKind { avoidPhrase, pendingObligation, other }
+
+/// Satu bisikan ke earpiece petugas.
+///
+/// [text] adalah kalimat Bahasa Indonesia yang DIUCAPKAN — backend
+/// mencocokkan kalimat itu untuk mengenali gemanya sendiri. [kind] beserta
+/// [code]/[phrase] dipakai untuk MENAMPILKANNYA dalam bahasa antarmuka.
+class Nudge {
+  const Nudge({
+    required this.text,
+    this.kind = NudgeKind.other,
+    this.code = '',
+    this.phrase = '',
+  });
+
+  final String text;
+  final NudgeKind kind;
+  final String code;
+  final String phrase;
+}
+
 class Obligation {
   const Obligation({
     required this.code,
@@ -21,14 +42,13 @@ class Obligation {
     ObligationStatus? status,
     double? confidence,
     String? evidenceId,
-  }) =>
-      Obligation(
-        code: code,
-        label: label,
-        status: status ?? this.status,
-        confidence: confidence ?? this.confidence,
-        evidenceId: evidenceId ?? this.evidenceId,
-      );
+  }) => Obligation(
+    code: code,
+    label: label,
+    status: status ?? this.status,
+    confidence: confidence ?? this.confidence,
+    evidenceId: evidenceId ?? this.evidenceId,
+  );
 }
 
 class Violation {

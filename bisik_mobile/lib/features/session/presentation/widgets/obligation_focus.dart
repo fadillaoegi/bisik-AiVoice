@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/language.dart';
 import '../../../../core/theme/bisik_theme.dart';
 import '../../domain/entities/compliance.dart';
+import '../session_strings.dart';
 
-/// Kalimat perintah per butir kewajiban.
-///
-/// Sengaja tidak memakai deskripsi dari backend: yang di sana adalah prompt
-/// untuk semantic matcher, kalimat orang ketiga yang deskriptif. Petugas yang
-/// sedang bicara butuh instruksi langsung dan pendek.
-const _hint = <String, String>{
-  'IDENTITY': 'Sebutkan nama kamu dan nama lembaga tempatmu bekerja.',
-  'RATE': 'Sebutkan suku bunga atau total biaya yang harus dibayar.',
-  'TENOR': 'Sebutkan jangka waktu dan besar cicilan per bulan.',
-  'PENALTY': 'Jelaskan denda kalau nasabah telat membayar.',
-  'RIGHT': 'Beri tahu nasabah berhak menolak atau membatalkan.',
-};
+// Kalimat perintah per butir ada di kamus (`AppStrings.obligationHint`).
+// Sengaja tidak memakai deskripsi dari backend: yang di sana adalah prompt
+// untuk semantic matcher, kalimat orang ketiga yang deskriptif. Petugas yang
+// sedang bicara butuh instruksi langsung dan pendek.
 
 /// Satu butir besar + titik progres — versi Flutter dari kartu fokus web.
 ///
@@ -28,6 +22,7 @@ class ObligationFocus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.s;
     // Nol butir berarti daftarnya belum termuat, BUKAN semuanya terpenuhi.
     // "Lengkap" pada checklist kosong adalah klaim palsu — kebalikan dari
     // gunanya produk ini.
@@ -39,21 +34,27 @@ class ObligationFocus extends StatelessWidget {
           border: Border.all(color: BisikColors.border),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Column(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('MEMUAT KEWAJIBAN',
-                style: TextStyle(
-                    color: BisikColors.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.6)),
-            SizedBox(height: 10),
-            Text('Menyiapkan…',
-                style: TextStyle(
-                    color: BisikColors.muted,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700)),
+            Text(
+              s.focusLoading,
+              style: const TextStyle(
+                color: BisikColors.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.6,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              s.focusPreparing,
+              style: const TextStyle(
+                color: BisikColors.muted,
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
       );
@@ -86,9 +87,7 @@ class ObligationFocus extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                next == null
-                    ? 'SEMUA KEWAJIBAN TERPENUHI'
-                    : 'BELUM DISAMPAIKAN',
+                next == null ? s.focusAllDone : s.focusPending,
                 style: const TextStyle(
                   color: BisikColors.muted,
                   fontSize: 11,
@@ -98,7 +97,7 @@ class ObligationFocus extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                next?.label ?? 'Lengkap',
+                next == null ? s.focusComplete : s.obligation(next),
                 style: TextStyle(
                   color: accent,
                   fontSize: 28,
@@ -109,11 +108,8 @@ class ObligationFocus extends StatelessWidget {
               if (next != null) ...[
                 const SizedBox(height: 10),
                 Text(
-                  _hint[next.code] ?? '',
-                  style: const TextStyle(
-                    color: BisikColors.text,
-                    fontSize: 15,
-                  ),
+                  s.obligationHint(next.code),
+                  style: const TextStyle(color: BisikColors.text, fontSize: 15),
                 ),
               ],
             ],
@@ -129,7 +125,7 @@ class ObligationFocus extends StatelessWidget {
               ),
             const SizedBox(width: 5),
             Text(
-              '$satisfied dari ${obligations.length}',
+              s.focusCount(satisfied, obligations.length),
               style: const TextStyle(color: BisikColors.muted, fontSize: 14),
             ),
           ],

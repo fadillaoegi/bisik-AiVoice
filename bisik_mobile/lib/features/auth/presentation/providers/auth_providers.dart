@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/error/failure.dart';
 import '../../../../core/network/auth_token.dart';
 import '../../../session/presentation/providers/di_providers.dart';
 import '../../data/auth_remote_datasource.dart';
@@ -9,15 +10,19 @@ import '../../domain/entities/auth_user.dart';
 /// datasource WebSocket, ditulis controller ini.
 final authTokenProvider = Provider((ref) => AuthToken());
 
-final _authRemoteProvider =
-    Provider((ref) => AuthRemoteDataSource(ref.watch(dioProvider)));
+final _authRemoteProvider = Provider(
+  (ref) => AuthRemoteDataSource(ref.watch(dioProvider)),
+);
 
 class AuthState {
   const AuthState({this.user, this.busy = false, this.error});
 
   final AuthUser? user;
   final bool busy;
-  final String? error;
+
+  /// [Failure] atau error lain; kalimatnya disusun saat ditampilkan agar
+  /// ikut bahasa antarmuka (`AppStrings.describe`).
+  final Object? error;
 
   bool get isLoggedIn => user != null;
 }
@@ -30,7 +35,9 @@ class AuthController extends Notifier<AuthState> {
     if (state.busy) return; // ketukan ganda tidak perlu dua permintaan
     state = const AuthState(busy: true);
     try {
-      final result = await ref.read(_authRemoteProvider).login(username, password);
+      final result = await ref
+          .read(_authRemoteProvider)
+          .login(username, password);
       ref.read(authTokenProvider).set(result.token);
 
       // Aplikasi mobile ini hanya untuk petugas di lapangan. Supervisor
@@ -39,14 +46,14 @@ class AuthController extends Notifier<AuthState> {
       if (result.user.role != Role.officer) {
         ref.read(authTokenProvider).clear();
         state = const AuthState(
-          error: 'Akun supervisor dipantau lewat dashboard web, bukan aplikasi ini.',
+          error: AccessFailure(FailureKind.supervisorAccount),
         );
         return;
       }
       state = AuthState(user: result.user);
     } catch (e) {
       ref.read(authTokenProvider).clear();
-      state = AuthState(error: '$e');
+      state = AuthState(error: e);
     }
   }
 
@@ -56,5 +63,6 @@ class AuthController extends Notifier<AuthState> {
   }
 }
 
-final authControllerProvider =
-    NotifierProvider<AuthController, AuthState>(AuthController.new);
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);

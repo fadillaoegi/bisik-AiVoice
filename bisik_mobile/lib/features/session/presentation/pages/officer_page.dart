@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/i18n/language.dart';
+import '../../../../core/i18n/language_switch.dart';
 import '../../../../core/theme/bisik_theme.dart';
 import '../../../../core/theme/bisik_wave.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../providers/session_controller.dart';
 import '../providers/session_state.dart';
+import '../session_strings.dart';
 import '../widgets/obligation_focus.dart';
 import '../widgets/obligation_tile.dart';
 import '../widgets/report_view.dart';
@@ -44,9 +47,13 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
         actions: [
           // Keluar hanya saat tidak ada sesi berjalan: menutup sesi di tengah
           // percakapan akan membuang skor yang belum sempat dihitung.
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Center(child: LanguageSwitch()),
+          ),
           if (!running)
             IconButton(
-              tooltip: 'Keluar',
+              tooltip: context.s.signOut,
               icon: const Icon(Icons.logout, size: 20),
               color: BisikColors.muted,
               onPressed: ref.read(authControllerProvider.notifier).logout,
@@ -87,21 +94,22 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
     );
   }
 
-  Widget _buildLoadingReport() => const Center(
+  Widget _buildLoadingReport() => Center(
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        BisikWave(height: 26),
-        SizedBox(height: 16),
+        const BisikWave(height: 26),
+        const SizedBox(height: 16),
         Text(
-          'Menyiapkan laporan berbukti…',
-          style: TextStyle(color: BisikColors.muted, fontSize: 15),
+          context.s.preparingReport,
+          style: const TextStyle(color: BisikColors.muted, fontSize: 15),
         ),
       ],
     ),
   );
 
   Widget _buildIdle(SessionState state, SessionController controller) {
+    final s = context.s;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -115,7 +123,7 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
               authControllerProvider.select((auth) => auth.user?.name),
             );
             return Text(
-              name == null ? '' : 'Masuk sebagai $name',
+              name == null ? '' : s.signedInAs(name),
               style: const TextStyle(color: BisikColors.muted, fontSize: 15),
             );
           },
@@ -131,15 +139,15 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: state.starting
-                ? const Row(
+                ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      BisikWave(height: 18, color: BisikColors.accentInk),
-                      SizedBox(width: 12),
-                      Text('Membuka sesi…'),
+                      const BisikWave(height: 18, color: BisikColors.accentInk),
+                      const SizedBox(width: 12),
+                      Text(s.openingSession),
                     ],
                   )
-                : const Text('Mulai sesi'),
+                : Text(s.startSession),
           ),
         ),
         // Kegagalan di sini dulu tidak pernah terlihat: error tersimpan di
@@ -147,13 +155,14 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
         // tampak mati padahal sebenarnya gagal menghubungi gateway.
         if (state.error != null) ...[
           const SizedBox(height: 16),
-          _Banner(text: state.error!, color: BisikColors.bad),
+          _Banner(text: s.describe(state.error!), color: BisikColors.bad),
         ],
       ],
     );
   }
 
   Widget _buildActive(SessionState state, SessionController controller) {
+    final s = context.s;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -166,26 +175,26 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
             ),
             const SizedBox(width: 8),
             Text(
-              '${state.connected ? "Terhubung" : "Menyambung…"} · '
-              '${state.recording ? "merekam" : "mic mati"}',
+              '${state.connected ? s.connected : s.connecting} · '
+              '${state.recording ? s.recording : s.micOff}',
               style: const TextStyle(color: BisikColors.muted, fontSize: 13),
             ),
           ],
         ),
         if (state.error != null) ...[
           const SizedBox(height: 12),
-          _Banner(text: state.error!, color: BisikColors.bad),
+          _Banner(text: s.describe(state.error!), color: BisikColors.bad),
         ],
         // Bagian yang tidak dihitung sebagai bukti harus terlihat: checklist
         // yang diam tanpa penjelasan membuat petugas mengira sistemnya rusak.
         if (state.warning != null) ...[
           const SizedBox(height: 12),
-          _Banner(text: state.warning!, color: BisikColors.warn),
+          _Banner(text: s.warning(state.warning!), color: BisikColors.warn),
         ],
         if (state.lastNudge != null) ...[
           const SizedBox(height: 12),
           _Banner(
-            text: state.lastNudge!,
+            text: s.nudge(state.lastNudge!),
             color: BisikColors.warn,
             icon: Icons.volume_up,
           ),
@@ -215,7 +224,7 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
               padding: EdgeInsets.zero,
               children: [
                 _Disclosure(
-                  title: 'Rincian kewajiban',
+                  title: s.obligationDetails,
                   child: Column(
                     children: [
                       for (final o in state.obligations)
@@ -224,7 +233,7 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
                   ),
                 ),
                 _Disclosure(
-                  title: 'Transkrip',
+                  title: s.transcript,
                   child: SizedBox(
                     height: 260,
                     child: TranscriptList(
@@ -244,9 +253,9 @@ class _OfficerPageState extends ConsumerState<OfficerPage> {
             foregroundColor: BisikColors.bad,
             side: const BorderSide(color: BisikColors.bad),
           ),
-          child: const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('Akhiri sesi'),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(s.endSession),
           ),
         ),
       ],

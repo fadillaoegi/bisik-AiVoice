@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/i18n/language.dart';
 import '../../../../core/theme/bisik_theme.dart';
 import '../../domain/entities/compliance.dart';
 import '../../domain/entities/session.dart';
+import '../session_strings.dart';
 
 /// Laporan berbukti setelah sesi berakhir.
 ///
@@ -17,6 +19,7 @@ class ReportView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.s;
     final score = report.session.score;
     final scoreColor = switch (score) {
       >= 80 => BisikColors.good,
@@ -27,9 +30,9 @@ class ReportView extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        const Text(
-          'LAPORAN KEPATUHAN',
-          style: TextStyle(
+        Text(
+          s.reportEyebrow,
+          style: const TextStyle(
             color: BisikColors.muted,
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -51,18 +54,20 @@ class ReportView extends StatelessWidget {
             ),
             const Padding(
               padding: EdgeInsets.only(bottom: 6, left: 4),
-              child: Text('/100',
-                  style: TextStyle(color: BisikColors.muted, fontSize: 15)),
+              child: Text(
+                '/100',
+                style: TextStyle(color: BisikColors.muted, fontSize: 15),
+              ),
             ),
             const Spacer(),
             _Stat(
               value: '${report.satisfiedCount}/${report.obligations.length}',
-              label: 'kewajiban',
+              label: s.statObligations,
             ),
             const SizedBox(width: 16),
             _Stat(
               value: '${report.violations.length}',
-              label: 'pelanggaran',
+              label: s.statViolations,
               color: report.violations.isEmpty
                   ? BisikColors.good
                   : BisikColors.bad,
@@ -71,15 +76,13 @@ class ReportView extends StatelessWidget {
         ),
         const SizedBox(height: 24),
 
-        const _SectionTitle('Bukti per kewajiban'),
-        for (final o in report.obligations) _EvidenceTile(
-          obligation: o,
-          evidence: report.evidenceFor(o),
-        ),
+        _SectionTitle(s.evidenceTitle),
+        for (final o in report.obligations)
+          _EvidenceTile(obligation: o, evidence: report.evidenceFor(o)),
 
         if (report.violations.isNotEmpty) ...[
           const SizedBox(height: 20),
-          const _SectionTitle('Pelanggaran'),
+          _SectionTitle(s.violationsTitle),
           for (final v in report.violations)
             Container(
               margin: const EdgeInsets.only(bottom: 6),
@@ -91,22 +94,30 @@ class ReportView extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('“${v.phrase}”',
-                        style: const TextStyle(color: BisikColors.bad)),
+                    child: Text(
+                      '“${v.phrase}”',
+                      style: const TextStyle(color: BisikColors.bad),
+                    ),
                   ),
-                  Text(v.severity,
-                      style: const TextStyle(
-                          color: BisikColors.muted, fontSize: 12)),
+                  Text(
+                    s.severity(v.severity),
+                    style: const TextStyle(
+                      color: BisikColors.muted,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
         ],
 
         const SizedBox(height: 20),
-        const _SectionTitle('Transkrip'),
+        _SectionTitle(s.transcriptTitle),
         if (report.transcript.isEmpty)
-          const Text('Tidak ada ucapan yang tersimpan.',
-              style: TextStyle(color: BisikColors.muted, fontSize: 14))
+          Text(
+            s.emptyTranscript,
+            style: const TextStyle(color: BisikColors.muted, fontSize: 14),
+          )
         else
           for (final u in report.transcript)
             Padding(
@@ -114,10 +125,13 @@ class ReportView extends StatelessWidget {
               child: RichText(
                 text: TextSpan(
                   style: const TextStyle(
-                      fontSize: 15, color: BisikColors.text, height: 1.4),
+                    fontSize: 15,
+                    color: BisikColors.text,
+                    height: 1.4,
+                  ),
                   children: [
                     TextSpan(
-                      text: '${_speaker(u.speaker)}  ',
+                      text: '${s.speaker(u.speaker)}  ',
                       style: TextStyle(
                         color: switch (u.speaker) {
                           Speaker.officer => BisikColors.officer,
@@ -136,21 +150,15 @@ class ReportView extends StatelessWidget {
         const SizedBox(height: 24),
         FilledButton(
           onPressed: onReset,
-          child: const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('Mulai sesi baru'),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(s.newSession),
           ),
         ),
         const SizedBox(height: 16),
       ],
     );
   }
-
-  static String _speaker(Speaker s) => switch (s) {
-        Speaker.officer => 'Petugas',
-        Speaker.customer => 'Nasabah',
-        Speaker.unknown => '—',
-      };
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -159,17 +167,17 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: BisikColors.muted,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Text(
+      text,
+      style: const TextStyle(
+        color: BisikColors.muted,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
 }
 
 class _Stat extends StatelessWidget {
@@ -181,17 +189,22 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(value,
-              style: TextStyle(
-                  color: color ?? BisikColors.text,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700)),
-          Text(label,
-              style: const TextStyle(color: BisikColors.muted, fontSize: 12)),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      Text(
+        value,
+        style: TextStyle(
+          color: color ?? BisikColors.text,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      Text(
+        label,
+        style: const TextStyle(color: BisikColors.muted, fontSize: 12),
+      ),
+    ],
+  );
 }
 
 class _EvidenceTile extends StatelessWidget {
@@ -218,18 +231,26 @@ class _EvidenceTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(satisfied ? Icons.check_circle : Icons.remove_circle_outline,
-                  size: 18, color: color),
+              Icon(
+                satisfied ? Icons.check_circle : Icons.remove_circle_outline,
+                size: 18,
+                color: color,
+              ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(obligation.label,
-                    style: const TextStyle(
-                        color: BisikColors.text, fontSize: 15)),
+                child: Text(
+                  context.s.obligation(obligation),
+                  style: const TextStyle(color: BisikColors.text, fontSize: 15),
+                ),
               ),
               if (satisfied)
-                Text('${(obligation.confidence * 100).round()}%',
-                    style: const TextStyle(
-                        color: BisikColors.muted, fontSize: 12)),
+                Text(
+                  '${(obligation.confidence * 100).round()}%',
+                  style: const TextStyle(
+                    color: BisikColors.muted,
+                    fontSize: 12,
+                  ),
+                ),
             ],
           ),
           if (evidence != null) ...[
@@ -238,16 +259,24 @@ class _EvidenceTile extends StatelessWidget {
               padding: const EdgeInsets.only(left: 12),
               decoration: const BoxDecoration(
                 border: Border(
-                    left: BorderSide(color: BisikColors.border, width: 2)),
+                  left: BorderSide(color: BisikColors.border, width: 2),
+                ),
               ),
-              child: Text('“${evidence!.text}”',
-                  style: const TextStyle(
-                      color: BisikColors.text, fontSize: 14, height: 1.4)),
+              child: Text(
+                '“${evidence!.text}”',
+                style: const TextStyle(
+                  color: BisikColors.text,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
             ),
           ] else if (!satisfied) ...[
             const SizedBox(height: 8),
-            const Text('Tidak pernah disampaikan.',
-                style: TextStyle(color: BisikColors.muted, fontSize: 13)),
+            Text(
+              context.s.neverDisclosed,
+              style: const TextStyle(color: BisikColors.muted, fontSize: 13),
+            ),
           ],
         ],
       ),
