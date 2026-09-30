@@ -1,183 +1,307 @@
 # Bisik
 
-> Kopilot kepatuhan real-time untuk petugas keuangan lapangan Indonesia. Bisik mendengarkan percakapan tatap muka **petugas ↔ nasabah**, mengenali siapa yang berbicara, lalu membisikkan kewajiban yang belum disampaikan — selagi percakapan masih berlangsung.
+> A private, preventive compliance copilot for face-to-face lending conversations.
 
-Dibangun untuk **AssemblyAI Voice Agent Hackathon 2026** (lablab.ai).
+Bisik listens to **two humans**—a field loan officer and a customer—identifies
+who is speaking, tracks which disclosures the officer has actually made, and
+whispers the next missing obligation privately into the officer's earpiece
+before the customer signs.
 
-**Bisik** adalah nama produk sekaligus nama repository dan ketiga
-component/module. Repository publik berada di `fadillaoegi/bisik-AiVoice`.
+Built for the **AssemblyAI Voice Agent Hackathon 2026**.
 
-## Kenapa ini berbeda
+## Judge links
 
-Hampir semua voice agent adalah **manusia ↔ bot**. Bisik adalah **AI yang mendengarkan dua manusia** dan hanya ikut campur saat ada kewajiban yang terlewat.
-
-Bedanya bukan sekadar teknis. Audit kepatuhan yang ada hari ini berjalan *setelah* kerugian terjadi — rekaman diputar ulang berminggu-minggu kemudian, saat nasabah sudah terlanjur menandatangani sesuatu yang tidak dia pahami. Bisik memindahkan koreksinya ke detik ketika masih ada gunanya: petugas mendengar pengingat di earpiece-nya sendiri, nasabah tidak mendengar apa pun, dan percakapan berjalan terus tanpa canggung.
-
-Pelanggaran tetap tercatat untuk supervisor. Mencegah bukan berarti menghapus jejak.
-
-## Coba sendiri
-
-**Demo terarah · 11 detik.** Buka `/officer`, klik **Putar demo terarah**. Berjalan sepenuhnya di browser — tanpa mikrofon, tanpa backend, tanpa API eksternal.
-
-Alurnya memperlihatkan seluruh mekanisme: petugas mengucapkan janji terlarang → bisikan koreksi masuk privat → kewajiban terpenuhi satu per satu → **diarization salah melabeli kalimat petugas sebagai nasabah, checklist sengaja tetap diam** → AssemblyAI mengoreksi labelnya, ucapan itu dinilai ulang, dua kewajiban terakhir baru berubah hijau → laporan berbukti.
-
-Babak koreksi label itu bukan hiasan. Tanpa penilaian ulang setelah revisi, koreksi diarization justru membuat laporan kepatuhan salah. Semua layar diberi label tegas sebagai simulasi.
-
-**Sesi sungguhan.** Masuk sebagai petugas, lalu klik **Mulai sesi** untuk menjalankan mikrofon, AssemblyAI, rule engine, dan laporan yang sebenarnya. Butuh backend berjalan, `ASSEMBLYAI_API_KEY` terisi, dan akun petugas. Demo terarah sengaja tetap terbuka tanpa login.
-
-Gunakan earphone saat sesi sungguhan, supaya bisikan tidak masuk kembali ke mikrofon.
-
-## Alur
-
-```
-Mic (PWA AudioWorklet / Flutter record)
-  │  PCM16 16 kHz mono, frame 50–1000 ms, WebSocket
-  ▼
-Go Gateway ── goroutine per sesi, channel fan-out
-  ├→ AssemblyAI Streaming STT + streaming speaker diarization
-  │    └─ kalibrasi A/B → konfirmasi PETUGAS vs NASABAH sebelum scoring
-  ├→ Rule engine: 5 butir kewajiban, semantic match via LLM Gateway
-  ├→ Guardrail deterministik: janji terlarang ("dijamin untung", "pasti cair")
-  └→ Bisikan → HANYA ke klien role officer → TTS di perangkat
-             (nasabah tidak mendengar, latensi lebih rendah)
-  ▼
-Laporan: skor + transkrip ber-timestamp + bukti per butir
-```
-
-## 5 butir kewajiban
-
-| Kode | Butir |
+| Resource | Link |
 |---|---|
-| `IDENTITY` | Identitas petugas & lembaga |
-| `RATE` | Suku bunga / total biaya |
-| `TENOR` | Jangka waktu & besaran cicilan |
-| `PENALTY` | Denda keterlambatan |
-| `RIGHT` | Hak nasabah menolak/membatalkan |
+| Live application | [https://fldevboo.biz.id](https://fldevboo.biz.id) |
+| Officer experience | [https://fldevboo.biz.id/officer](https://fldevboo.biz.id/officer) |
+| Supervisor dashboard | [https://fldevboo.biz.id/supervisor](https://fldevboo.biz.id/supervisor) |
+| Repository | [github.com/fadillaoegi/bisik-AiVoice](https://github.com/fadillaoegi/bisik-AiVoice) |
 
-Sengaja hardcoded. Editor rule bukan scope hackathon.
+The root URL redirects to the officer experience. The web interface supports
+Bahasa Indonesia and English.
 
-## Cara sistem ini gagal dengan aman
+## Demo credentials
 
-Produk kepatuhan punya satu arah kegagalan yang jauh lebih berbahaya daripada yang lain. Checklist yang tertunda hijau hanya merepotkan petugas. Checklist yang hijau **padahal kewajibannya tidak pernah disampaikan** membuat laporannya berbohong — dan laporan itulah seluruh nilai produknya.
+These accounts are intentionally public and exist only for hackathon judging.
+Both were verified against the deployed application on 30 September 2026.
 
-Karena itu setiap keputusan di bawah ini condong ke arah yang sama:
+| Role | Username | Password | Opens |
+|---|---|---|---|
+| Officer | `petugas` | `petugas123` | `/officer` |
+| Supervisor | `supervisor` | `supervisor123` | `/supervisor` |
 
-| Situasi | Yang dilakukan sistem |
+The guided demo below does **not** require an account.
+
+## Fastest judging path: 11-second guided demo
+
+1. Open the [officer page](https://fldevboo.biz.id/officer).
+2. Switch to **EN** if preferred.
+3. Click **Play guided demo · 11 seconds**.
+4. Watch the checklist during the intentional speaker-label error.
+
+The guided demo runs entirely in the browser—no login, microphone, backend, or
+external API is required. It is visibly labelled **LOCAL SIMULATION** and shows:
+
+1. the officer making a forbidden promise;
+2. a private correction sent only to the officer;
+3. obligations being completed with transcript evidence;
+4. an officer sentence temporarily labelled as customer speech;
+5. the checklist correctly refusing to turn green;
+6. a later speaker-label revision and evidence re-evaluation; and
+7. the final evidence-backed report.
+
+The fourth and fifth steps are the important safe-fail proof: customer speech,
+unknown speech, and an uncertain attribution can never satisfy an officer's
+obligation.
+
+## Test a live two-person session
+
+For the most reliable live test:
+
+1. Use Chrome and sign in at `/officer` with the officer account above.
+2. Wear an earphone so Bisik's private whisper is not captured by the mic.
+3. Click **Start Session** and allow microphone access.
+4. Let the officer and customer read their calibration sentence one at a time.
+5. Confirm the two voice roles before scoring begins.
+6. Speak in turns, leaving a one- or two-second gap between speakers.
+7. Use Bahasa Indonesia for the officer's disclosure sentences. The current
+   evidence matcher is Indonesia-first; the customer may speak either language.
+8. End the session only after the last utterance appears in the transcript.
+
+Suggested officer lines:
+
+```text
+Selamat pagi, Pak. Perkenalkan, nama saya Rina dari Bank Nusantara.
+Tenang saja, Pak, pengajuan ini pasti disetujui.              # intentional violation
+Maaf, saya koreksi. Persetujuan tetap melalui penilaian dulu, Pak.
+Suku bunganya 1,2 persen setiap bulan, dengan biaya administrasi seratus ribu rupiah.
+Tenornya 12 bulan, dengan cicilan sekitar 953 ribu rupiah per bulan.
+Kalau terlambat membayar, ada denda lima ribu rupiah per hari.
+Bapak berhak menolak atau membatalkan penawaran ini.
+```
+
+Expected result: five satisfied obligations, one forbidden-promise violation,
+and a final score of **90/100**, with a quote and timestamp for every satisfied
+item. The complete two-person script is in
+[`submission/skrip-uji-dialog-dwibahasa.txt`](./submission/skrip-uji-dialog-dwibahasa.txt).
+
+## Supervisor path
+
+1. Sign in at `/supervisor` with the supervisor account.
+2. Select a recent session.
+3. Review speakers, checklist progress, warnings, violations, and score.
+4. Open the completed report to inspect evidence quotes and timestamps.
+
+The supervisor never sends microphone audio and never receives the officer's
+private whisper.
+
+## The problem
+
+In Indonesian field lending, consequential product explanations often happen
+face to face, from memory, without a supervisor in the room. If an officer
+forgets the interest rate, repayment term, late penalty, or the customer's
+right to walk away, the omission may only be discovered after the agreement is
+signed.
+
+Traditional compliance review is forensic: it explains what went wrong later.
+Bisik is preventive: it helps the officer correct the conversation while the
+customer can still make an informed decision.
+
+## What makes Bisik different
+
+- **Private coaching, not public interruption.** Corrections are spoken through
+  the officer's own device and earphone.
+- **Preventive, not post-facto.** The next missing duty is surfaced before the
+  conversation finishes.
+- **Two-human listening.** Bisik is not another human-to-bot assistant; it must
+  distinguish evidence from the officer, customer, and unknown speakers.
+- **Evidence, not a green checkbox.** Every satisfied item retains the exact
+  sentence and timestamp that justified it.
+- **Safe when uncertain.** A delayed check is preferable to a false claim that
+  the officer said something they never said.
+- **Indonesia-first field workflow.** The demo uses a transparent five-item SOP
+  for Indonesian lending conversations.
+
+## How AssemblyAI is used
+
+Audio is captured as PCM16 16 kHz mono and sent through the Go gateway to two
+AssemblyAI streaming paths:
+
+- `whisper-rt` produces accurate Indonesian real-time transcription;
+- streaming multilingual diarization separates and revises speaker labels;
+- word spans and `SpeakerRevision` events are merged before compliance scoring;
+- explicit two-voice calibration maps anonymous labels to officer/customer;
+- calibration speech is never stored or scored.
+
+AssemblyAI provides the real-time speech and speaker intelligence. Bisik adds
+the role-confirmation protocol, deterministic guardrails, evidence gates,
+semantic verification, private browser TTS, safe-fail behaviour, and reporting.
+
+Semantic verification is provider-independent: Groq is currently first, with
+configured fallbacks. It is called only after a deterministic evidence gate and
+must return at least `0.80` confidence.
+
+## Runtime flow
+
+```text
+Officer microphone (PWA AudioWorklet / Flutter recorder)
+       │ PCM16, 16 kHz mono
+       ▼
+Go WebSocket gateway
+       ├── AssemblyAI transcription stream
+       ├── AssemblyAI speaker-diarization stream
+       └── merge text + speaker spans + later revisions
+                         │
+                         ▼
+              confirmed speaker roles
+                         │
+        ┌────────────────┴─────────────────┐
+        ▼                                  ▼
+deterministic guardrail          evidence gate + semantic verifier
+        │                                  │
+        └──────── private nudge ───────────┘
+                         │
+                         ▼
+ PostgreSQL transcript, evidence, violations, final report
+```
+
+## Five demo SOP obligations
+
+| Code | Required disclosure |
 |---|---|
-| Ucapan tidak memuat bukti spesifik butirnya | Ditolak sebelum LLM dipanggil — hemat biaya sekaligus menahan false-green |
-| LLM yakin di bawah 0,80 | Tidak dihitung memenuhi |
-| Janji terlarang terucap | Dicocokkan frasa secara deterministik, bukan lewat LLM, supaya tidak bergantung sampling model |
-| Suara belum dikalibrasi | Scoring ditahan sampai manusia mengonfirmasi mana petugas dan mana nasabah |
-| Muncul pembicara ketiga | Diberi label sendiri (`max_speakers=3`), tidak mewarisi role siapa pun, tidak ikut dinilai |
-| Diarization mengoreksi label belakangan | Ucapan yang ternyata milik petugas dinilai ulang — tanpa ini koreksi justru merusak laporan |
-| Audio terlalu pelan, pecah, atau bising | Checklist ditahan dan peringatan ditampilkan; guardrail tetap jalan karena meloloskan janji terlarang lebih berbahaya |
-| Stream upstream putus di tengah sesi | Petugas diberi tahu dan pengingat berkala berhenti, supaya UI tidak tampak menyimak padahal sudah mati |
+| `IDENTITY` | Officer identity and institution |
+| `RATE` | Interest rate or total cost |
+| `TENOR` | Term and instalment amount |
+| `PENALTY` | Late-payment penalty |
+| `RIGHT` | Customer's right to refuse or cancel |
 
-## Privasi
+These are explicitly a **hackathon demo SOP**, not a claim that the prototype
+implements or certifies official Indonesian regulation.
 
-- **Audio mentah tidak pernah disimpan.** Database hanya memuat transkrip dan bukti kepatuhan. Lihat [`bisik_backend/SCHEMA.md`](./bisik_backend/SCHEMA.md).
-- **Nasabah tidak memakai aplikasi ini.** Dia tidak memegang perangkat dan tidak mendengar bisikannya; suaranya ditranskrip sebagai bagian dari percakapan.
-- **Bisikan keluar di perangkat petugas**, bukan di-streaming balik dari server.
+## Safe-fail rules
 
-Persetujuan nasabah untuk ditranskrip adalah kewajiban lembaga yang memakai Bisik, dan alurnya belum ada di prototipe ini.
+| Situation | Behaviour |
+|---|---|
+| Specific evidence is missing | Rejected before semantic verification |
+| Semantic confidence is below `0.80` | Obligation remains pending |
+| Forbidden promise is spoken | Deterministic guardrail records it immediately |
+| Voice roles are not calibrated | Compliance scoring remains locked |
+| Customer or unknown speaker says the right words | Checklist does not advance |
+| A third voice appears | Kept `unknown`; never inherits another role |
+| Audio is quiet, clipped, or noisy | Checklist is held and the officer is warned |
+| Speaker label is revised | The affected evidence is evaluated again |
+| Verifier or upstream service fails | UI reports the failure; no false-green result |
+| A spoken whisper echoes into the mic | Recent-nudge echo guard excludes it from scoring |
 
-## Model kepercayaan
+## Privacy and access control
 
-| Aktor | Login | Boleh apa |
+- Raw audio is never stored. PostgreSQL keeps transcripts, evidence, session
+  state, and violations.
+- Customers do not log in, hold the device, or hear the private whisper.
+- Officer and supervisor permissions are enforced by signed backend tokens.
+- A report is readable only by its officer or a supervisor.
+- Session ownership comes from the token, never from a client-supplied owner ID.
+- Passwords are stored with PBKDF2-HMAC-SHA256 (600,000 iterations).
+
+Customer consent for transcription would be the deploying institution's
+responsibility; a production consent workflow is outside this prototype.
+
+## Repository structure
+
+| Project | Purpose | Stack |
 |---|---|---|
-| **Petugas** | Ya — PWA atau Flutter | Menjalankan **sesinya sendiri**, mengirim audio, menerima bisikan privat |
-| **Supervisor** | Ya — `/supervisor` | Memantau sesi mana pun dan membaca laporannya. **Tidak pernah** mengirim audio |
-| **Nasabah** | Tidak | Hanya berbicara. Tidak login, tidak menekan apa pun, tidak mendengar bisikan |
+| [`bisik_frontend/`](./bisik_frontend) | Primary judge experience: officer PWA, supervisor dashboard, report, guided demo | React 19, TypeScript, Vite, Redux Toolkit, Workbox |
+| [`bisik_backend/`](./bisik_backend) | WebSocket gateway, AssemblyAI streams, auth, rules, evidence, reporting | Go, pgx, PostgreSQL 18 |
+| [`bisik_mobile/`](./bisik_mobile) | Field officer mobile client | Flutter, Riverpod, Dio |
 
-Yang ditegakkan backend:
+All three projects follow the same dependency direction:
 
-- **Pemilik sesi diambil dari token, tidak pernah dari body permintaan.** Tanpa ini, klien bisa menyebutkan sendiri siapa dirinya dan atribusi laporan tidak membuktikan apa pun — padahal klaim utama produk ini justru bukti.
-- **Peran WebSocket ditentukan token, bukan query.** Sebelumnya klien menulis `role=officer` sendiri, artinya siapa pun yang tahu ID sesi bisa mendorong audio ke percakapan orang lain.
-- Laporan hanya bisa dibaca pemilik sesinya atau supervisor. Sesi hanya bisa diakhiri petugas yang memulainya.
-- Kata sandi disimpan sebagai PBKDF2-HMAC-SHA256 600.000 iterasi. Login yang gagal memberi pesan yang sama persis untuk akun tidak ada dan kata sandi salah, supaya endpoint ini tidak bisa dipakai memetakan akun yang valid.
-
-Batasan yang disadari: token bertanda tangan HMAC dan bersifat stateless, jadi **tidak bisa dicabut sebelum kedaluwarsa** — untuk produksi perlu daftar cabut atau umur token yang lebih pendek plus refresh. Token WebSocket dikirim lewat query karena browser tidak mengizinkan header kustom pada handshake, jadi bisa muncul di access log proxy. Aplikasi Flutter menyimpan token di memori saja, sehingga petugas masuk ulang setiap aplikasi dibuka.
-
-## Batasan yang disadari
-
-- **Jalur live belum terbukti ujung ke ujung.** Handshake `whisper-rt` + diarization sudah berhasil dan ukuran frame audio sudah diperbaiki, tetapi belum ada satu pun transkrip sungguhan yang diterima dari AssemblyAI. Mode demo terarah disediakan justru karena ini.
-- **Percakapan tumpang tindih dari satu mikrofon tidak dapat dipisahkan sempurna.** UX meminta bicara bergantian; solusi produksi yang benar adalah mikrofon terpisah per pembicara.
-- **Ambang quality gate audio belum dikalibrasi dengan rekaman nyata**, angkanya dipilih dari teori sinyal.
-- **Flutter tertinggal dari PWA**: belum ada UI kalibrasi suara dan belum ada layar laporan. PWA adalah deliverable utama.
-- Pemetaan ulang role di tengah sesi, riwayat sesi supervisor, dan reconnect otomatis belum ada.
-
-## Tiga project
-
-| Folder | Isi | Stack |
-|---|---|---|
-| [`bisik_frontend/`](./bisik_frontend) | PWA petugas (`/officer`) + dashboard supervisor (`/supervisor`) | React 19 · Vite · TypeScript · Redux Toolkit |
-| [`bisik_backend/`](./bisik_backend) | Gateway WebSocket, rule engine, laporan | Go 1.26 · pgx · PostgreSQL 18 |
-| [`bisik_mobile/`](./bisik_mobile) | App petugas di lapangan | Flutter · Riverpod |
-
-Ketiganya memakai **clean architecture** dengan aturan dependensi yang sama:
-
-```
-domain  ←  application/usecase  ←  adapter/infrastructure  ←  presentation
-   ↑ tidak pernah mengimpor ke arah kanan
+```text
+domain  ←  application/use cases  ←  adapters/infrastructure  ←  presentation
 ```
 
-Lapisan backend, pembagian state, dan daftar endpoint dijelaskan di
-[`bisik_backend/README.md`](./bisik_backend/README.md). Skema database ada di
-[`bisik_backend/SCHEMA.md`](./bisik_backend/SCHEMA.md).
+See [`bisik_backend/README.md`](./bisik_backend/README.md) for backend boundaries
+and endpoints, and [`bisik_backend/SCHEMA.md`](./bisik_backend/SCHEMA.md) for the
+database schema and migrations.
 
-## Menjalankan
+## Run locally
 
-Runbook lengkap — termasuk alamat untuk emulator, simulator, dan perangkat
-fisik, serta skenario uji dua pembicara — ada di [`TESTING.md`](./TESTING.md).
+Requirements: Go, Node 24+, pnpm, Flutter for the mobile client, and Docker only
+for PostgreSQL.
 
-### 1. Backend + PostgreSQL
+### 1. PostgreSQL and backend
 
 ```bash
 cd bisik_backend
-test -f .env || cp .env.example .env   # jangan timpa .env yang sudah terisi
-make db                                # PostgreSQL 18 di Docker, migrasi otomatis
-make dev                               # API di :8080
+test -f .env || cp .env.example .env
+# Fill ASSEMBLYAI_API_KEY, AUTH_SECRET, and at least one semantic-provider key.
+make db
+make dev
 ```
 
-### 2. Frontend
+The API starts on `http://localhost:8080`.
+
+### 2. React PWA
 
 ```bash
 cd bisik_frontend
 cp .env.example .env
-pnpm install && pnpm dev               # http://localhost:5173/officer
+pnpm install
+pnpm dev
 ```
 
-### 3. Mobile
+Open `http://localhost:5173/officer`.
+
+### 3. Flutter client
 
 ```bash
 cd bisik_mobile
 flutter pub get
-flutter run --dart-define=API_URL=http://10.0.2.2:8080 --dart-define=WS_URL=ws://10.0.2.2:8080
+flutter run \
+  --dart-define=API_URL=http://10.0.2.2:8080 \
+  --dart-define=WS_URL=ws://10.0.2.2:8080
 ```
 
-> `10.0.2.2` adalah alamat host dari emulator Android. Untuk perangkat fisik atau
-> simulator iOS, ganti dengan IP LAN mesinmu — kalau tidak, aplikasi tidak akan
-> menemukan gateway.
+`10.0.2.2` is the host address from an Android emulator. For an iPhone,
+physical Android device, or iOS simulator, follow [`TESTING.md`](./TESTING.md)
+and use the correct host/LAN address.
 
-### Build deployment
-
-Frontend dibuild memakai Node host (minimum Node 24), bukan image Node di
-Docker. Hasil `bisik_frontend/dist` disimpan di repository supaya builder
-deployment hanya memerlukan Go:
+## Verification
 
 ```bash
-make deploy-build   # pnpm install + build frontend dengan Node host
-make deploy-image   # langkah di atas + build image aplikasi
+cd bisik_backend && go test ./... && go vet ./...
+cd ../bisik_frontend && pnpm lint && pnpm build
+cd ../bisik_mobile && flutter analyze && flutter test
 ```
 
-Setiap perubahan frontend wajib diikuti `make deploy-build` sebelum commit.
+The deployment image serves the compiled PWA and Go API from one container;
+PostgreSQL runs separately. Frontend production assets are built with host
+Node—there is no Node Docker image in this repository.
 
-## Status
+## Honest limitations
 
-Ketiga project terkompilasi bersih: `go test ./...`, `go vet ./...`, `pnpm lint`,
-`pnpm build`, dan `flutter analyze` semuanya hijau. Rule engine, evidence gate,
-kalibrasi pembicara, safe-fail, dan kontrak protokol AssemblyAI memiliki unit test.
+- The compliance evidence rules are currently Indonesia-first even when the UI
+  is switched to English.
+- Overlapping speech captured by one shared microphone cannot be separated
+  perfectly; the demo asks participants to speak in turns.
+- Audio-quality thresholds were selected conservatively and still need broader
+  calibration across real rooms and devices.
+- The dual AssemblyAI stream has been proven with real two-voice audio, but the
+  full two-person browser workflow has not been repeated as a formal benchmark.
+- The Flutter client builds for Android and iOS but the React PWA is the primary
+  judging experience.
+- The public usernames and passwords above are disposable hackathon accounts
+  and must be removed or rotated for any real deployment.
 
-Yang belum terbukti disebutkan apa adanya di [Batasan yang disadari](#batasan-yang-disadari).
-Catatan pengerjaan harian, keputusan teknis beserta alasannya, dan daftar
-pekerjaan tersisa ada di [`PROGRESS.md`](./PROGRESS.md).
+## Documentation
+
+- [`TESTING.md`](./TESTING.md) — complete test/runbook and troubleshooting
+- [`PROGRESS.md`](./PROGRESS.md) — chronological engineering decisions and QA
+- [`FEATURE-ROADMAP.md`](./FEATURE-ROADMAP.md) — feature status and priorities
+- [`submission/`](./submission) — pitch copy, video script, dialogue, and deck
+
+---
+
+**Bisik: an AI that listens to two humans, so the right thing is said before
+the customer signs.**
