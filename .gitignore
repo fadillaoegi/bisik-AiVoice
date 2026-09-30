@@ -10,6 +10,10 @@ bin/
 .dart_tool/
 build/
 
+# Local source media and generated video renders are too large for Git.
+bahan/
+submission/
+
 # Ignore markdown files and rradmin
 *.md
 !README.md
