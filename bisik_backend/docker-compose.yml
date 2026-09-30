@@ -7,8 +7,6 @@ services:
       POSTGRES_USER: bisik
       POSTGRES_PASSWORD: bisik
       POSTGRES_DB: bisik
-    ports:
-      - "5432:5432"
     volumes:
       # Volume baru: kredensial dan nama database ikut berganti ke `bisik`,
       # dan role/database di dalam volume lama tetap bernama `saksi` — tidak
@@ -25,7 +23,7 @@ services:
       retries: 10
 
   # Opsional: jalankan backend di dalam Docker juga.
-  #   docker compose --profile full up
+  #   docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile full up
   # Untuk dev sehari-hari lebih enak `make dev` (hot path di host).
   api:
     profiles: ["full"]
@@ -39,9 +37,7 @@ services:
       PORT: "8080"
       DATABASE_URL: "postgres://bisik:bisik@postgres:5432/bisik?sslmode=disable"
       ASSEMBLYAI_API_KEY: "${ASSEMBLYAI_API_KEY}"
-      ALLOWED_ORIGINS: "http://localhost:5173"
-    ports:
-      - "8080:8080"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS}"
 
 volumes:
   bisik_pgdata18:

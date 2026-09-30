@@ -1,0 +1,16 @@
+# Development override — port sama seperti sebelumnya
+# Penggunaan:
+#   postgres saja : docker compose -f docker-compose.yml -f docker-compose.dev.yml up postgres
+#   full (+ api)  : docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile full up
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  api:
+    environment:
+      PORT: "8080"
+      ALLOWED_ORIGINS: "http://localhost:5173"
+    ports:
+      - "8080:8080"

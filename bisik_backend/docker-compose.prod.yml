@@ -1,0 +1,23 @@
+# Production override — port range 8100-8120
+# Penggunaan:
+#   postgres saja : docker compose -f docker-compose.yml -f docker-compose.prod.yml up postgres
+#   full (+ api)  : docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile full up
+#
+# Port mapping production:
+#   8100 → PostgreSQL  (tidak diekspos ke publik, hanya internal — bisa dihapus portnya)
+#   8101 → API backend
+
+services:
+  postgres:
+    container_name: bisik_postgres_prod
+    ports:
+      - "8100:5432"
+
+  api:
+    container_name: bisik_api_prod
+    environment:
+      PORT: "8101"
+      DATABASE_URL: "postgres://bisik:bisik@postgres:5432/bisik?sslmode=disable"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-https://bisik.app}"
+    ports:
+      - "8101:8101"
